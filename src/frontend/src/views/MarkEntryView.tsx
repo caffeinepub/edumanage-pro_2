@@ -16,28 +16,28 @@ const EXAM_TABS = [
     key: "monthly",
     label: "Monthly Test",
     labelHi: "मासिक परीक्षा",
-    maxMarks: 30,
+    maxMarks: 60,
     color: "#7c3aed",
   },
   {
     key: "halfyearly",
     label: "Half Yearly Exam",
     labelHi: "अर्द्धवार्षिक परीक्षा",
-    maxMarks: 100,
+    maxMarks: 60,
     color: "#1a56db",
   },
   {
     key: "annual",
     label: "Annual Written Exam",
     labelHi: "वार्षिक लिखित परीक्षा",
-    maxMarks: 100,
+    maxMarks: 60,
     color: "#0891b2",
   },
   {
     key: "project",
-    label: "Annual Project Work",
-    labelHi: "वार्षिक प्रोजेक्ट कार्य",
-    maxMarks: 50,
+    label: "Project Work",
+    labelHi: "प्रोजेक्ट कार्य",
+    maxMarks: 20,
     color: "#16a34a",
   },
 ] as const;
@@ -123,7 +123,6 @@ function saveRows(
   rows: StudentRow[],
   selectedIds: Set<number>,
 ) {
-  // Save to new v2 key for per-examKey storage
   const key = `emsmarks_v2_${examKey}_${subject}`;
   const payload: Record<
     number,
@@ -141,7 +140,6 @@ function saveRows(
   }
   localStorage.setItem(key, JSON.stringify(payload));
 
-  // Also save marks in the required format: { studentId: { monthly, halfyearly, annual, project } }
   const marksKey = "studentExamMarks";
   let allMarks: Record<number, Record<string, string>> = {};
   try {
@@ -233,6 +231,18 @@ export function MarkEntryView({ role }: { role: Role }) {
     });
   };
 
+  const handleMarksChange = (id: number, value: string, max: number) => {
+    const num = Number(value);
+    if (value !== "" && !Number.isNaN(num) && num > max) {
+      alert(`अंक ${max} से अधिक नहीं हो सकते! (Marks cannot exceed ${max})`);
+      updateRow(id, { marks: String(max) });
+      setErrors((prev) => ({ ...prev, [id]: `Max: ${max}` }));
+      return;
+    }
+    updateRow(id, { marks: value });
+    setErrors((prev) => ({ ...prev, [id]: "" }));
+  };
+
   const handleSave = () => {
     const newErrors: Record<number, string> = {};
     for (const r of rows) {
@@ -240,12 +250,17 @@ export function MarkEntryView({ role }: { role: Role }) {
       if (r.marks !== "") {
         const v = Number(r.marks);
         if (Number.isNaN(v) || v < 0 || v > maxMarks) {
-          newErrors[r.id] = `0-${maxMarks}`;
+          newErrors[r.id] = `Max: ${maxMarks}`;
         }
       }
     }
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+    if (Object.keys(newErrors).length > 0) {
+      alert(
+        `कुछ अंक अमान्य हैं। कृपया जांचें। (Some marks exceed the maximum of ${maxMarks})`,
+      );
+      return;
+    }
     saveRows(activeTab, subject, rows, selectedIds);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -630,6 +645,12 @@ export function MarkEntryView({ role }: { role: Role }) {
                 {pageRows.map((row, idx) => {
                   const isAbsent = !row.present || row.cancelled;
                   const isChecked = selectedIds.has(row.id);
+                  const hasError = Boolean(errors[row.id]);
+                  const marksNum = Number(row.marks);
+                  const isInvalid =
+                    row.marks !== "" &&
+                    !Number.isNaN(marksNum) &&
+                    marksNum > maxMarks;
                   return (
                     <tr
                       key={row.id}
@@ -768,43 +789,88 @@ export function MarkEntryView({ role }: { role: Role }) {
                         />
                       </td>
                       <td style={{ ...tdStyle, textAlign: "center" }}>
-                        <input
-                          type="number"
-                          min={0}
-                          max={maxMarks}
-                          value={row.marks}
-                          disabled={row.locked || !row.present || row.cancelled}
-                          onChange={(e) => {
-                            updateRow(row.id, { marks: e.target.value });
-                            setErrors((prev) => ({ ...prev, [row.id]: "" }));
-                          }}
-                          placeholder={`0-${maxMarks}`}
+                        <div
                           style={{
-                            width: 72,
-                            padding: "4px 6px",
-                            border: `1px solid ${errors[row.id] ? "#ef4444" : "#d1d5db"}`,
-                            borderRadius: 4,
-                            fontSize: 12.5,
-                            textAlign: "center",
-                            outline: "none",
-                            background:
-                              row.locked || !row.present || row.cancelled
-                                ? "#f3f4f6"
-                                : "#fff",
-                            cursor: row.locked ? "not-allowed" : "default",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
                           }}
-                        />
-                        {errors[row.id] && (
+                        >
                           <div
                             style={{
-                              color: "#ef4444",
-                              fontSize: 10,
-                              marginTop: 2,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
                             }}
                           >
-                            {errors[row.id]}
+                            <input
+                              type="number"
+                              min={0}
+                              max={maxMarks}
+                              value={row.marks}
+                              disabled={
+                                row.locked || !row.present || row.cancelled
+                              }
+                              onChange={(e) =>
+                                handleMarksChange(
+                                  row.id,
+                                  e.target.value,
+                                  maxMarks,
+                                )
+                              }
+                              placeholder="0"
+                              style={{
+                                width: 60,
+                                padding: "4px 6px",
+                                border: `1px solid ${
+                                  hasError || isInvalid ? "#ef4444" : "#d1d5db"
+                                }`,
+                                borderRadius: 4,
+                                fontSize: 12.5,
+                                textAlign: "center",
+                                outline: "none",
+                                background:
+                                  row.locked || !row.present || row.cancelled
+                                    ? "#f3f4f6"
+                                    : isInvalid
+                                      ? "#fef2f2"
+                                      : "#fff",
+                                cursor: row.locked ? "not-allowed" : "default",
+                                boxShadow:
+                                  isInvalid || hasError
+                                    ? "0 0 0 2px #fca5a5"
+                                    : "none",
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: currentTab.color,
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                                background: `${currentTab.color}15`,
+                                border: `1px solid ${currentTab.color}40`,
+                                borderRadius: 3,
+                                padding: "1px 5px",
+                              }}
+                            >
+                              Max: {maxMarks}
+                            </span>
                           </div>
-                        )}
+                          {(hasError || isInvalid) && (
+                            <div
+                              style={{
+                                color: "#ef4444",
+                                fontSize: 10,
+                                marginTop: 1,
+                                fontWeight: 600,
+                              }}
+                            >
+                              ⚠ Max {maxMarks} allowed
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
