@@ -1,4 +1,8 @@
 import { students as mockStudents } from "@/data/mockData";
+import {
+  dateToHindiWords,
+  dateToNumericFormat,
+} from "@/utils/dateToHindiWords";
 import { useEffect, useState } from "react";
 
 interface Student {
@@ -8,6 +12,7 @@ interface Student {
   section: string;
   rollNo?: string;
   enrollmentNo?: string;
+  dob?: string;
 }
 
 interface StudentProfile {
@@ -116,6 +121,14 @@ const EXAM_KEY_MAP: Record<string, string> = {
   project: "project",
 };
 
+const GRADES = ["A+", "A", "B+", "B", "C", "D", "F"];
+
+function lowerGrade(grade: string): string {
+  const idx = GRADES.indexOf(grade);
+  if (idx === -1 || idx >= GRADES.length - 1) return "F";
+  return GRADES[idx + 1];
+}
+
 function buildMarkEntryData(): MarkEntryData {
   const result: MarkEntryData = {};
   try {
@@ -209,6 +222,7 @@ export function ReportCardView({ role: _role }: { role: string }) {
         class: s.class ?? "",
         section: s.section ?? "",
         rollNo: s.rollNo,
+        dob: (s as unknown as { dob?: string }).dob,
       })),
       ...uniqueExtra,
     ];
@@ -252,6 +266,35 @@ export function ReportCardView({ role: _role }: { role: string }) {
   const grandTotal = subjectTotals.reduce((acc, s) => acc + s.total, 0);
   const maxTotal = subjects.length * 100;
   const finalGrade = getGrade(grandTotal, maxTotal);
+
+  // Subject-based grade helpers
+  const hindiTotal = subjectTotals.find((s) => s.key === "hindi")?.total ?? 0;
+  const englishTotal =
+    subjectTotals.find((s) => s.key === "english")?.total ?? 0;
+  const mathTotal = subjectTotals.find((s) => s.key === "math")?.total ?? 0;
+  const sciTotal =
+    subjectTotals.find((s) => s.key === "science")?.total ??
+    subjectTotals.find((s) => s.key === "evs")?.total ??
+    mathTotal;
+
+  const hindiGrade = getGrade(hindiTotal, 100);
+  const englishGrade = getGrade(englishTotal, 100);
+  const mathGrade = getGrade(mathTotal, 100);
+  const sciGrade = getGrade(sciTotal, 100);
+
+  // Co-Scholastic auto grades (manual saved value takes priority)
+  const csLiterary = cs.literary || hindiGrade;
+  const csCultural = cs.cultural || englishGrade;
+  const csScientific = cs.scientific || sciGrade;
+  const csCreative = cs.creative || mathGrade;
+  const csSports = cs.sports || lowerGrade(finalGrade);
+
+  // Personal Skills auto grades (manual saved value takes priority)
+  const psCleanliness = ps.cleanliness || hindiGrade;
+  const psDiscipline = ps.discipline || lowerGrade(finalGrade);
+  const psHonesty = ps.honesty || englishGrade;
+  const psPunctuality = ps.punctuality || mathGrade;
+  const psCooperation = ps.cooperation || lowerGrade(finalGrade);
 
   return (
     <>
@@ -429,9 +472,15 @@ export function ReportCardView({ role: _role }: { role: string }) {
                 </tr>
                 <tr>
                   <td style={{ fontWeight: "bold" }}>जन्म तिथि (अंकों में)</td>
-                  <td>{profile.dob || ""}</td>
+                  <td>
+                    {profile.dob ||
+                      (student?.dob ? dateToNumericFormat(student.dob) : "")}
+                  </td>
                   <td style={{ fontWeight: "bold" }}>जन्म तिथि (शब्दों में)</td>
-                  <td>{profile.dobWords || ""}</td>
+                  <td>
+                    {profile.dobWords ||
+                      (student?.dob ? dateToHindiWords(student.dob) : "")}
+                  </td>
                 </tr>
                 <tr>
                   <td style={{ fontWeight: "bold" }}>समग्र आई.डी.</td>
@@ -548,20 +597,26 @@ export function ReportCardView({ role: _role }: { role: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(
-                    [
-                      ["साहित्यिक (Literary)", cs.literary],
-                      ["सांस्कृतिक (Cultural)", cs.cultural],
-                      ["वैज्ञानिक (Scientific)", cs.scientific],
-                      ["सृजनात्मक (Creative)", cs.creative],
-                      ["खेलकूद (Sports)", cs.sports],
-                    ] as [string, string | undefined][]
-                  ).map(([label, grade]) => (
-                    <tr key={label}>
-                      <td>{label}</td>
-                      <td style={{ textAlign: "center" }}>{grade || "-"}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td>साहित्यिक (Literary)</td>
+                    <td style={{ textAlign: "center" }}>{csLiterary}</td>
+                  </tr>
+                  <tr>
+                    <td>सांस्कृतिक (Cultural)</td>
+                    <td style={{ textAlign: "center" }}>{csCultural}</td>
+                  </tr>
+                  <tr>
+                    <td>वैज्ञानिक (Scientific)</td>
+                    <td style={{ textAlign: "center" }}>{csScientific}</td>
+                  </tr>
+                  <tr>
+                    <td>सृजनात्मक (Creative)</td>
+                    <td style={{ textAlign: "center" }}>{csCreative}</td>
+                  </tr>
+                  <tr>
+                    <td>खेलकूद (Sports)</td>
+                    <td style={{ textAlign: "center" }}>{csSports}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -584,20 +639,26 @@ export function ReportCardView({ role: _role }: { role: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(
-                    [
-                      ["स्वच्छता (Cleanliness)", ps.cleanliness],
-                      ["अनुशासन (Discipline)", ps.discipline],
-                      ["ईमानदारी (Honesty)", ps.honesty],
-                      ["समयनिष्ठा (Punctuality)", ps.punctuality],
-                      ["सहयोग (Cooperation)", ps.cooperation],
-                    ] as [string, string | undefined][]
-                  ).map(([label, grade]) => (
-                    <tr key={label}>
-                      <td>{label}</td>
-                      <td style={{ textAlign: "center" }}>{grade || "-"}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td>स्वच्छता (Cleanliness)</td>
+                    <td style={{ textAlign: "center" }}>{psCleanliness}</td>
+                  </tr>
+                  <tr>
+                    <td>अनुशासन (Discipline)</td>
+                    <td style={{ textAlign: "center" }}>{psDiscipline}</td>
+                  </tr>
+                  <tr>
+                    <td>ईमानदारी (Honesty)</td>
+                    <td style={{ textAlign: "center" }}>{psHonesty}</td>
+                  </tr>
+                  <tr>
+                    <td>समयनिष्ठा (Punctuality)</td>
+                    <td style={{ textAlign: "center" }}>{psPunctuality}</td>
+                  </tr>
+                  <tr>
+                    <td>सहयोग (Cooperation)</td>
+                    <td style={{ textAlign: "center" }}>{psCooperation}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>

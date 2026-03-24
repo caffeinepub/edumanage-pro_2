@@ -30,15 +30,21 @@ import {
 import { students as mockStudents } from "@/data/mockData";
 import type { Role } from "@/hooks/useAuth";
 import {
+  dateToHindiWords,
+  dateToNumericFormat,
+} from "@/utils/dateToHindiWords";
+import { transliterateToHindi } from "@/utils/hindiTransliterate";
+import {
   ChevronDown,
   ChevronUp,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   Trash2,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const LS_KEY = "ems_added_students";
 const LS_DELETED_KEY = "ems_deleted_ids";
@@ -52,6 +58,15 @@ interface Student {
   rollNo: string;
   attendance: number;
   grade: string;
+  fatherName?: string;
+  motherName?: string;
+  samagraId?: string;
+  aadharNo?: string;
+  scholarNo?: string;
+  nameHindi?: string;
+  fatherNameHindi?: string;
+  motherNameHindi?: string;
+  dob?: string; // stored as YYYY-MM-DD
 }
 
 function loadAddedStudents(): Student[] {
@@ -95,6 +110,88 @@ interface StudentsViewProps {
   username: string;
 }
 
+// Small reusable Hindi field component
+interface HindiFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  isManual: boolean;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  onChange: (val: string) => void;
+  onManualEdit: () => void;
+  onAutoReset: () => void;
+}
+
+function HindiField({
+  id,
+  label,
+  value,
+  isManual,
+  inputRef,
+  onChange,
+  onManualEdit,
+  onAutoReset,
+}: HindiFieldProps) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="flex items-center gap-2 flex-wrap">
+        {label}
+        {isManual ? (
+          <span className="text-[10px] font-normal bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex items-center gap-1">
+            <Pencil className="w-2.5 h-2.5" />
+            मैन्युअल संपादन
+          </span>
+        ) : (
+          <span className="text-[10px] font-normal bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+            स्वतः भरा जाएगा
+          </span>
+        )}
+        <button
+          type="button"
+          title="Hindi field edit करें"
+          onClick={() => {
+            onManualEdit();
+            setTimeout(() => inputRef.current?.focus(), 0);
+          }}
+          className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </Label>
+      <Input
+        id={id}
+        ref={inputRef}
+        value={value}
+        placeholder="हिंदी नाम…"
+        onChange={(e) => {
+          onManualEdit();
+          onChange(e.target.value);
+        }}
+        className={`${
+          isManual
+            ? "bg-green-50 text-green-900 focus-visible:ring-green-200"
+            : "bg-blue-50 text-blue-800 focus-visible:ring-blue-200"
+        } transition-colors`}
+      />
+      <div className="flex items-center gap-2 min-h-[16px]">
+        <span className="text-xs text-muted-foreground">
+          गलत हो तो हिंदी सुधारें
+        </span>
+        {isManual && (
+          <button
+            type="button"
+            onClick={onAutoReset}
+            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-0.5 transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Auto reset करें
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function StudentsView({
   onViewDetail,
   role,
@@ -109,9 +206,34 @@ export function StudentsView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+
+  // Form fields
   const [formName, setFormName] = useState("");
+  const [formNameHindi, setFormNameHindi] = useState("");
+  const [formNameHindiManual, setFormNameHindiManual] = useState(false);
+
   const [formClass, setFormClass] = useState("");
   const [formSection, setFormSection] = useState("");
+
+  const [formFatherName, setFormFatherName] = useState("");
+  const [formFatherNameHindi, setFormFatherNameHindi] = useState("");
+  const [formFatherNameHindiManual, setFormFatherNameHindiManual] =
+    useState(false);
+
+  const [formMotherName, setFormMotherName] = useState("");
+  const [formMotherNameHindi, setFormMotherNameHindi] = useState("");
+  const [formMotherNameHindiManual, setFormMotherNameHindiManual] =
+    useState(false);
+
+  const [formSamagraId, setFormSamagraId] = useState("");
+  const [formAadharNo, setFormAadharNo] = useState("");
+  const [formScholarNo, setFormScholarNo] = useState("");
+  const [formDob, setFormDob] = useState("");
+
+  // Refs for focusing Hindi inputs
+  const nameHindiRef = useRef<HTMLInputElement>(null);
+  const fatherHindiRef = useRef<HTMLInputElement>(null);
+  const motherHindiRef = useRef<HTMLInputElement>(null);
 
   const allStudents: Student[] = [
     ...mockStudents
@@ -136,26 +258,69 @@ export function StudentsView({
       s.rollNo.toLowerCase().includes(search.toLowerCase()),
   );
 
-  function openAddDialog() {
-    setEditingStudent(null);
+  function resetForm() {
     setFormName("");
+    setFormNameHindi("");
+    setFormNameHindiManual(false);
     setFormClass("");
     setFormSection("");
+    setFormFatherName("");
+    setFormFatherNameHindi("");
+    setFormFatherNameHindiManual(false);
+    setFormMotherName("");
+    setFormMotherNameHindi("");
+    setFormMotherNameHindiManual(false);
+    setFormSamagraId("");
+    setFormAadharNo("");
+    setFormScholarNo("");
+    setFormDob("");
+  }
+
+  function openAddDialog() {
+    setEditingStudent(null);
+    resetForm();
     setDialogOpen(true);
   }
 
   function openEditDialog(student: Student) {
     setEditingStudent(student);
     setFormName(student.name);
+    setFormNameHindi(student.nameHindi ?? transliterateToHindi(student.name));
+    setFormNameHindiManual(false);
     setFormClass(student.class);
     setFormSection(student.section);
+    setFormFatherName(student.fatherName ?? "");
+    setFormFatherNameHindi(
+      student.fatherNameHindi ?? transliterateToHindi(student.fatherName ?? ""),
+    );
+    setFormFatherNameHindiManual(false);
+    setFormMotherName(student.motherName ?? "");
+    setFormMotherNameHindi(
+      student.motherNameHindi ?? transliterateToHindi(student.motherName ?? ""),
+    );
+    setFormMotherNameHindiManual(false);
+    setFormSamagraId(student.samagraId ?? "");
+    setFormAadharNo(student.aadharNo ?? "");
+    setFormScholarNo(student.scholarNo ?? "");
+    setFormDob(student.dob ?? "");
     setDialogOpen(true);
   }
 
   function handleSaveStudent(e: React.FormEvent) {
     e.preventDefault();
+    const extraFields = {
+      fatherName: formFatherName.trim(),
+      fatherNameHindi: formFatherNameHindi.trim(),
+      motherName: formMotherName.trim(),
+      motherNameHindi: formMotherNameHindi.trim(),
+      samagraId: formSamagraId.trim(),
+      aadharNo: formAadharNo.trim(),
+      scholarNo: formScholarNo.trim(),
+      nameHindi: formNameHindi.trim(),
+      dob: formDob,
+    };
+
     if (editingStudent) {
-      // Check if it's an added student
       const isAdded = addedStudents.some((s) => s.id === editingStudent.id);
       if (isAdded) {
         const updated = addedStudents.map((s) =>
@@ -165,6 +330,7 @@ export function StudentsView({
                 name: formName.trim(),
                 class: formClass.trim(),
                 section: formSection.trim(),
+                ...extraFields,
               }
             : s,
         );
@@ -178,6 +344,7 @@ export function StudentsView({
             name: formName.trim(),
             class: formClass.trim(),
             section: formSection.trim(),
+            ...extraFields,
           },
         };
         localStorage.setItem(
@@ -196,6 +363,7 @@ export function StudentsView({
         rollNo: `${formClass.trim().replace(/\s+/g, "").toUpperCase()}-${suffix}`,
         attendance: 85,
         grade: "B",
+        ...extraFields,
       };
       const updated = [...addedStudents, newStudent];
       localStorage.setItem(LS_KEY, JSON.stringify(updated));
@@ -203,9 +371,7 @@ export function StudentsView({
     }
     setDialogOpen(false);
     setEditingStudent(null);
-    setFormName("");
-    setFormClass("");
-    setFormSection("");
+    resetForm();
   }
 
   function handleDeleteConfirm() {
@@ -233,46 +399,210 @@ export function StudentsView({
     >
       {/* Add/Edit Student Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md" data-ocid="students.dialog">
+        <DialogContent className="sm:max-w-2xl" data-ocid="students.dialog">
           <DialogHeader>
             <DialogTitle>
               {editingStudent ? "Edit Student" : "Add New Student"}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSaveStudent} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="student-name">Full Name</Label>
-              <Input
-                id="student-name"
-                data-ocid="students.name_input"
-                placeholder="e.g. Aisha Khan"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                required
+            {/* Student Name — English + Hindi side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="student-name">Student Name (English)</Label>
+                <Input
+                  id="student-name"
+                  data-ocid="students.name_input"
+                  placeholder="e.g. Ramesh Kumar"
+                  value={formName}
+                  onChange={(e) => {
+                    setFormName(e.target.value);
+                    if (!formNameHindiManual) {
+                      setFormNameHindi(transliterateToHindi(e.target.value));
+                    }
+                  }}
+                  required
+                />
+              </div>
+              <HindiField
+                id="student-name-hindi"
+                label="छात्र का नाम (Hindi)"
+                value={formNameHindi}
+                isManual={formNameHindiManual}
+                inputRef={nameHindiRef}
+                onChange={setFormNameHindi}
+                onManualEdit={() => setFormNameHindiManual(true)}
+                onAutoReset={() => {
+                  setFormNameHindiManual(false);
+                  setFormNameHindi(transliterateToHindi(formName));
+                }}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="student-class">Class</Label>
-              <Input
-                id="student-class"
-                data-ocid="students.class_input"
-                placeholder="e.g. 10-A"
-                value={formClass}
-                onChange={(e) => setFormClass(e.target.value)}
-                required
+
+            {/* Father Name — English + Hindi */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="father-name">पिता का नाम (English)</Label>
+                <Input
+                  id="father-name"
+                  data-ocid="students.input"
+                  placeholder="e.g. Ramesh Kumar"
+                  value={formFatherName}
+                  onChange={(e) => {
+                    setFormFatherName(e.target.value);
+                    if (!formFatherNameHindiManual) {
+                      setFormFatherNameHindi(
+                        transliterateToHindi(e.target.value),
+                      );
+                    }
+                  }}
+                />
+              </div>
+              <HindiField
+                id="father-name-hindi"
+                label="पिता का नाम (Hindi)"
+                value={formFatherNameHindi}
+                isManual={formFatherNameHindiManual}
+                inputRef={fatherHindiRef}
+                onChange={setFormFatherNameHindi}
+                onManualEdit={() => setFormFatherNameHindiManual(true)}
+                onAutoReset={() => {
+                  setFormFatherNameHindiManual(false);
+                  setFormFatherNameHindi(transliterateToHindi(formFatherName));
+                }}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="student-section">Section</Label>
-              <Input
-                id="student-section"
-                data-ocid="students.section_input"
-                placeholder="e.g. A"
-                value={formSection}
-                onChange={(e) => setFormSection(e.target.value)}
-                required
+
+            {/* Mother Name — English + Hindi */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="mother-name">माता का नाम (English)</Label>
+                <Input
+                  id="mother-name"
+                  data-ocid="students.input"
+                  placeholder="e.g. Sunita Devi"
+                  value={formMotherName}
+                  onChange={(e) => {
+                    setFormMotherName(e.target.value);
+                    if (!formMotherNameHindiManual) {
+                      setFormMotherNameHindi(
+                        transliterateToHindi(e.target.value),
+                      );
+                    }
+                  }}
+                />
+              </div>
+              <HindiField
+                id="mother-name-hindi"
+                label="माता का नाम (Hindi)"
+                value={formMotherNameHindi}
+                isManual={formMotherNameHindiManual}
+                inputRef={motherHindiRef}
+                onChange={setFormMotherNameHindi}
+                onManualEdit={() => setFormMotherNameHindiManual(true)}
+                onAutoReset={() => {
+                  setFormMotherNameHindiManual(false);
+                  setFormMotherNameHindi(transliterateToHindi(formMotherName));
+                }}
               />
             </div>
+
+            {/* Samagra ID & Aadhar No */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="samagra-id">समग्र आई.डी. (Samagra ID)</Label>
+                <Input
+                  id="samagra-id"
+                  data-ocid="students.input"
+                  placeholder="9-digit Samagra ID"
+                  value={formSamagraId}
+                  onChange={(e) => setFormSamagraId(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="aadhar-no">आधार नं. (Aadhar No.)</Label>
+                <Input
+                  id="aadhar-no"
+                  data-ocid="students.input"
+                  placeholder="12-digit Aadhar number"
+                  value={formAadharNo}
+                  onChange={(e) => setFormAadharNo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Scholar No */}
+            <div className="space-y-1.5">
+              <Label htmlFor="scholar-no">स्कॉलर क्रमांक (Scholar No.)</Label>
+              <Input
+                id="scholar-no"
+                data-ocid="students.input"
+                placeholder="Scholar number"
+                value={formScholarNo}
+                onChange={(e) => setFormScholarNo(e.target.value)}
+              />
+            </div>
+
+            {/* Date of Birth */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="student-dob">जन्म तिथि (Date of Birth)</Label>
+                <Input
+                  id="student-dob"
+                  type="date"
+                  data-ocid="students.input"
+                  value={formDob}
+                  onChange={(e) => setFormDob(e.target.value)}
+                />
+              </div>
+              {formDob && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      जन्म तिथि (अंकों में)
+                    </Label>
+                    <div className="px-3 py-2 rounded-md border border-border bg-secondary/40 text-sm font-mono font-medium">
+                      {dateToNumericFormat(formDob)}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      जन्म तिथि (शब्दों में)
+                    </Label>
+                    <div className="px-3 py-2 rounded-md border border-blue-200 bg-blue-50 text-sm text-blue-900 font-medium">
+                      {dateToHindiWords(formDob)}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Class & Section */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="student-class">Class</Label>
+                <Input
+                  id="student-class"
+                  data-ocid="students.class_input"
+                  placeholder="e.g. 10-A"
+                  value={formClass}
+                  onChange={(e) => setFormClass(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="student-section">Section</Label>
+                <Input
+                  id="student-section"
+                  data-ocid="students.section_input"
+                  placeholder="e.g. A"
+                  value={formSection}
+                  onChange={(e) => setFormSection(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
             <DialogFooter className="pt-2">
               <Button
                 type="button"
