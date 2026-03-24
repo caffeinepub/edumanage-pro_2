@@ -9,6 +9,7 @@ import { AttendanceView } from "./views/AttendanceView";
 import { DashboardView } from "./views/DashboardView";
 import { MarkEntryView } from "./views/MarkEntryView";
 import { ProfileView } from "./views/ProfileView";
+import { ReportCardView } from "./views/ReportCardView";
 import { ResultsView } from "./views/ResultsView";
 import { StudentDetailView } from "./views/StudentDetailView";
 import { StudentsView } from "./views/StudentsView";
@@ -86,12 +87,13 @@ function App() {
               {activeItem === "attendance" && <AttendanceView />}
               {activeItem === "results" && <ResultsView />}
               {activeItem === "markEntry" && <MarkEntryView role={role} />}
+              {activeItem === "reportCard" && <ReportCardView role={role} />}
               {activeItem === "profile" && <ProfileView />}
             </motion.div>
           </AnimatePresence>
         </main>
 
-        <footer className="py-4 px-6 border-t border-border bg-card">
+        <footer className="no-print py-4 px-6 border-t border-border bg-card">
           <p className="text-xs text-muted-foreground text-center">
             © {new Date().getFullYear()}. Built with ❤️ using{" "}
             <a

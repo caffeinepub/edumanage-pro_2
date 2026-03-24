@@ -12,6 +12,7 @@ const pageTitles: Record<NavItem, string> = {
   results: "Examination Results",
   markEntry: "Mark Entry",
   profile: "My Profile",
+  reportCard: "Samagra Pragati Patrak",
 };
 
 const roleLabels: Record<Role, string> = {
@@ -44,6 +45,14 @@ export function Header({
     <header className="sticky top-0 z-20 bg-white border-b border-border shadow-sm">
       <div className="flex items-center justify-between h-16 px-4 lg:px-6">
         <div className="flex items-center gap-4">
+          {/* MP Board Logo */}
+          <img
+            src="/assets/uploads/download-019d1f1a-928b-7508-b27d-197b82228018-1.png"
+            alt="MP Board Logo"
+            width={52}
+            height={52}
+            style={{ objectFit: "contain", flexShrink: 0 }}
+          />
           <button
             type="button"
             className="lg:hidden p-2 rounded-md text-muted-foreground hover:bg-secondary transition-colors"

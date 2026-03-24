@@ -9,7 +9,7 @@ import {
   ShieldAlert,
   Unlock,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const EXAM_TABS = [
   {
@@ -45,10 +45,78 @@ const EXAM_TABS = [
 type ExamKey = (typeof EXAM_TABS)[number]["key"];
 
 const CATEGORIES = ["Language", "Subject"];
+
+// Class-wise subject configuration
+const CLASS_SUBJECT_CONFIG: Record<
+  string,
+  {
+    categories: Record<string, string[]>;
+    allSubjects: { key: string; labelHi: string }[];
+  }
+> = {
+  "3": {
+    categories: {
+      Language: ["Hindi", "English"],
+      Subject: ["Mathematics", "EVS"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "EVS", labelHi: "पर्यावरण (EVS)" },
+    ],
+  },
+  "4": {
+    categories: {
+      Language: ["Hindi", "English"],
+      Subject: ["Mathematics", "EVS"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "EVS", labelHi: "पर्यावरण (EVS)" },
+    ],
+  },
+  "6": {
+    categories: {
+      Language: ["Hindi", "English", "Sanskrit"],
+      Subject: ["Mathematics", "Science", "Social Science"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Sanskrit", labelHi: "संस्कृत" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "Science", labelHi: "विज्ञान" },
+      { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
+    ],
+  },
+  "7": {
+    categories: {
+      Language: ["Hindi", "English", "Sanskrit"],
+      Subject: ["Mathematics", "Science", "Social Science"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Sanskrit", labelHi: "संस्कृत" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "Science", labelHi: "विज्ञान" },
+      { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
+    ],
+  },
+};
+
+const CLASS_OPTIONS = ["3", "4", "6", "7"];
+
+// Default (class 6) — overridden dynamically
 const SUBJECTS_BY_CATEGORY: Record<string, string[]> = {
   Language: ["Hindi", "English", "Sanskrit"],
   Subject: ["Mathematics", "Science", "Social Science"],
 };
+
+// MONTHLY_SUBJECTS moved to CLASS_SUBJECT_CONFIG
 
 const PAGE_SIZE = 5;
 
@@ -157,6 +225,37 @@ function saveRows(
   localStorage.setItem(marksKey, JSON.stringify(allMarks));
 }
 
+/** Read a student's marks for a given monthly subject from localStorage */
+function getMonthlySubjectMarks(studentId: number, subjectKey: string): number {
+  try {
+    const raw = localStorage.getItem(`emsmarks_v2_monthly_${subjectKey}`);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw);
+    const val = parsed[studentId]?.marks;
+    const num = Number(val);
+    return Number.isNaN(num) ? 0 : num;
+  } catch {
+    return 0;
+  }
+}
+
+/** Read a student's marks for a given half yearly subject from localStorage */
+function getHalfYearlySubjectMarks(
+  studentId: number,
+  subjectKey: string,
+): number {
+  try {
+    const raw = localStorage.getItem(`emsmarks_v2_halfyearly_${subjectKey}`);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw);
+    const val = parsed[studentId]?.marks;
+    const num = Number(val);
+    return Number.isNaN(num) ? 0 : num;
+  } catch {
+    return 0;
+  }
+}
+
 export function MarkEntryView({ role }: { role: Role }) {
   const [activeTab, setActiveTab] = useState<ExamKey>("monthly");
   const [category, setCategory] = useState(CATEGORIES[0]);
@@ -169,13 +268,36 @@ export function MarkEntryView({ role }: { role: Role }) {
   const [page, setPage] = useState(1);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
+  const [selectedStudent, setSelectedStudent] = useState<string>("all");
+  const [selectedClass, setSelectedClass] = useState<string>("6");
+
+  // Derived subject config based on selected class
+  const classConfig = CLASS_SUBJECT_CONFIG[selectedClass];
+  const subjectsByCategory = classConfig.categories;
+  const monthlySubjects = classConfig.allSubjects;
 
   const currentTab = EXAM_TABS.find((t) => t.key === activeTab)!;
   const maxMarks = currentTab.maxMarks;
 
+  // Auto-load students on page mount
   useEffect(() => {
-    setSubject(SUBJECTS_BY_CATEGORY[category][0]);
-  }, [category]);
+    handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const cats = CLASS_SUBJECT_CONFIG[selectedClass].categories;
+    setSubject(cats[category]?.[0] ?? cats[Object.keys(cats)[0]][0]);
+  }, [category, selectedClass]);
+
+  // When class changes, reset category and subject
+  const handleClassChange = (cls: string) => {
+    setSelectedClass(cls);
+    const cats = CLASS_SUBJECT_CONFIG[cls].categories;
+    const firstCat = Object.keys(cats)[0];
+    setCategory(firstCat);
+    setSubject(cats[firstCat][0]);
+  };
 
   const handleTabChange = (tab: ExamKey) => {
     setActiveTab(tab);
@@ -197,6 +319,7 @@ export function MarkEntryView({ role }: { role: Role }) {
     setErrors({});
     setSaved(false);
     setSearched(true);
+    setSelectedStudent("all");
   };
 
   const handleReset = () => {
@@ -208,14 +331,25 @@ export function MarkEntryView({ role }: { role: Role }) {
     setErrors({});
     setSaved(false);
     setSearched(false);
+    setSelectedStudent("all");
   };
 
-  const totalStudents = rows.length;
-  const presentStudents = rows.filter((r) => r.present && !r.cancelled).length;
-  const absentStudents = rows.filter((r) => !r.present || r.cancelled).length;
+  // Filter rows by selected student
+  const filteredRows =
+    selectedStudent === "all"
+      ? rows
+      : rows.filter((r) => String(r.id) === selectedStudent);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalStudents = filteredRows.length;
+  const presentStudents = filteredRows.filter(
+    (r) => r.present && !r.cancelled,
+  ).length;
+  const absentStudents = filteredRows.filter(
+    (r) => !r.present || r.cancelled,
+  ).length;
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const pageRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const updateRow = (id: number, patch: Partial<StudentRow>) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -265,6 +399,60 @@ export function MarkEntryView({ role }: { role: Role }) {
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
+
+  const studentList = getStudentList();
+
+  // Monthly result calculation — reacts to rows changes and selected student
+  const monthlyResult = useMemo(() => {
+    if (activeTab !== "monthly" || selectedStudent === "all") return null;
+    const studentId = Number(selectedStudent);
+    const subjectMarks = monthlySubjects.map((s) => ({
+      ...s,
+      marks: getMonthlySubjectMarks(studentId, s.key),
+    }));
+    // Also pick up any unsaved in-memory marks for currently displayed subject
+    for (const row of rows) {
+      if (row.id === studentId) {
+        const subEntry = subjectMarks.find((s) => s.key === subject);
+        if (subEntry) {
+          const inMemory = Number(row.marks);
+          subEntry.marks = Number.isNaN(inMemory) ? subEntry.marks : inMemory;
+        }
+        break;
+      }
+    }
+    const total = subjectMarks.reduce((sum, s) => sum + s.marks, 0);
+    const subjectCount = monthlySubjects.length;
+    const final = subjectCount > 0 ? total / (subjectCount * 6) : 0;
+    return { subjectMarks, total, final };
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
+  }, [activeTab, selectedStudent, rows, subject, monthlySubjects]);
+
+  // Half Yearly result calculation — reacts to rows changes and selected student
+  const halfYearlyResult = useMemo(() => {
+    if (activeTab !== "halfyearly" || selectedStudent === "all") return null;
+    const studentId = Number(selectedStudent);
+    const subjectMarks = monthlySubjects.map((s) => ({
+      ...s,
+      marks: getHalfYearlySubjectMarks(studentId, s.key),
+    }));
+    // Also pick up any unsaved in-memory marks for currently displayed subject
+    for (const row of rows) {
+      if (row.id === studentId) {
+        const subEntry = subjectMarks.find((s) => s.key === subject);
+        if (subEntry) {
+          const inMemory = Number(row.marks);
+          subEntry.marks = Number.isNaN(inMemory) ? subEntry.marks : inMemory;
+        }
+        break;
+      }
+    }
+    const total = subjectMarks.reduce((sum, s) => sum + s.marks, 0);
+    const subjectCount = monthlySubjects.length; // 4 or 6
+    const final = subjectCount > 0 ? total / (subjectCount * 3) : 0;
+    return { subjectMarks, total, final, subjectCount };
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
+  }, [activeTab, selectedStudent, rows, subject, monthlySubjects]);
 
   if (role === "student") {
     return (
@@ -435,6 +623,67 @@ export function MarkEntryView({ role }: { role: Role }) {
           alignItems: "flex-end",
         }}
       >
+        {/* Class dropdown */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            minWidth: 120,
+          }}
+        >
+          <label htmlFor="class-select" style={labelStyle}>
+            कक्षा / Class
+          </label>
+          <select
+            id="class-select"
+            value={selectedClass}
+            onChange={(e) => handleClassChange(e.target.value)}
+            style={selectStyle}
+          >
+            {CLASS_OPTIONS.map((cls) => (
+              <option key={cls} value={cls}>
+                कक्षा {cls}वीं
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Student dropdown */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            minWidth: 200,
+          }}
+        >
+          <label htmlFor="student-select" style={labelStyle}>
+            छात्र / Student
+          </label>
+          <select
+            id="student-select"
+            value={selectedStudent}
+            onChange={(e) => {
+              setSelectedStudent(e.target.value);
+              setPage(1);
+            }}
+            style={selectStyle}
+            data-ocid="mark_entry.select"
+          >
+            <option value="all">-- All Students --</option>
+            {studentList.length === 0 ? (
+              <option disabled>No students found</option>
+            ) : (
+              studentList.map((s) => (
+                <option key={s.id} value={String(s.id)}>
+                  {s.rollNo} - {s.name}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
         <div
           style={{
             display: "flex",
@@ -452,7 +701,7 @@ export function MarkEntryView({ role }: { role: Role }) {
             onChange={(e) => setCategory(e.target.value)}
             style={selectStyle}
           >
-            {CATEGORIES.map((c) => (
+            {Object.keys(subjectsByCategory).map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
@@ -474,7 +723,7 @@ export function MarkEntryView({ role }: { role: Role }) {
             onChange={(e) => setSubject(e.target.value)}
             style={selectStyle}
           >
-            {SUBJECTS_BY_CATEGORY[category].map((s) => (
+            {(subjectsByCategory[category] ?? []).map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
@@ -484,6 +733,7 @@ export function MarkEntryView({ role }: { role: Role }) {
             type="button"
             onClick={handleSearch}
             style={{ ...btnStyle, background: currentTab.color, color: "#fff" }}
+            data-ocid="mark_entry.primary_button"
           >
             <Search style={{ width: 14, height: 14 }} /> Search
           </button>
@@ -491,6 +741,7 @@ export function MarkEntryView({ role }: { role: Role }) {
             type="button"
             onClick={handleReset}
             style={{ ...btnStyle, background: "#6b7280", color: "#fff" }}
+            data-ocid="mark_entry.secondary_button"
           >
             Reset
           </button>
@@ -555,8 +806,716 @@ export function MarkEntryView({ role }: { role: Role }) {
         </div>
       )}
 
+      {/* Monthly Result Panel */}
+      {monthlyResult && (
+        <div
+          style={{
+            marginTop: 12,
+            background: "#faf5ff",
+            border: "1px solid #c4b5fd",
+            borderLeft: "4px solid #7c3aed",
+            borderRadius: 6,
+            overflow: "hidden",
+          }}
+          data-ocid="mark_entry.panel"
+        >
+          {/* Panel header */}
+          <div
+            style={{
+              background: "linear-gradient(90deg, #7c3aed 0%, #6d28d9 100%)",
+              color: "#fff",
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                मासिक परिणाम सारांश / Monthly Result Summary
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.85, marginTop: 1 }}>
+                सभी विषयों के अंकों का योग (All subjects combined)
+              </div>
+            </div>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: 6,
+                padding: "6px 16px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 10, opacity: 0.85 }}>मासिक परिणाम</div>
+              <div
+                id="monthlyResult"
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  letterSpacing: 0.5,
+                  lineHeight: 1.2,
+                }}
+                data-ocid="mark_entry.card"
+              >
+                {monthlyResult.final.toFixed(2)}
+              </div>
+              <div style={{ fontSize: 10, opacity: 0.85 }}>/ 10</div>
+            </div>
+          </div>
+
+          {/* Subject marks table */}
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 12.5,
+              }}
+            >
+              <thead>
+                <tr
+                  style={{
+                    background: "#ede9fe",
+                    color: "#5b21b6",
+                  }}
+                >
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#ede9fe",
+                      color: "#5b21b6",
+                      border: "1px solid #c4b5fd",
+                      textAlign: "left",
+                    }}
+                  >
+                    विषय / Subject
+                  </th>
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#ede9fe",
+                      color: "#5b21b6",
+                      border: "1px solid #c4b5fd",
+                    }}
+                  >
+                    अंक / Marks
+                  </th>
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#ede9fe",
+                      color: "#5b21b6",
+                      border: "1px solid #c4b5fd",
+                    }}
+                  >
+                    अधिकतम / Max
+                  </th>
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#ede9fe",
+                      color: "#5b21b6",
+                      border: "1px solid #c4b5fd",
+                    }}
+                  >
+                    स्थिति / Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyResult.subjectMarks.map((s, idx) => {
+                  const pct = Math.round((s.marks / 60) * 100);
+                  return (
+                    <tr
+                      key={s.key}
+                      style={{
+                        background: idx % 2 === 0 ? "#faf5ff" : "#f5f0ff",
+                        borderBottom: "1px solid #e9d5ff",
+                      }}
+                    >
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #e9d5ff",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span style={{ color: "#7c3aed" }}>{s.labelHi}</span>
+                        <span
+                          style={{
+                            color: "#9ca3af",
+                            fontWeight: 400,
+                            marginLeft: 6,
+                            fontSize: 11.5,
+                          }}
+                        >
+                          ({s.key})
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #e9d5ff",
+                          textAlign: "center",
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: s.marks > 0 ? "#5b21b6" : "#9ca3af",
+                        }}
+                      >
+                        {s.marks}
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #e9d5ff",
+                          textAlign: "center",
+                          color: "#6b7280",
+                        }}
+                      >
+                        60
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #e9d5ff",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            justifyContent: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 60,
+                              height: 6,
+                              background: "#e9d5ff",
+                              borderRadius: 3,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${pct}%`,
+                                height: "100%",
+                                background:
+                                  pct >= 60
+                                    ? "#16a34a"
+                                    : pct >= 33
+                                      ? "#7c3aed"
+                                      : "#dc2626",
+                                borderRadius: 3,
+                                transition: "width 0.3s",
+                              }}
+                            />
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color:
+                                pct >= 60
+                                  ? "#16a34a"
+                                  : pct >= 33
+                                    ? "#7c3aed"
+                                    : s.marks === 0
+                                      ? "#9ca3af"
+                                      : "#dc2626",
+                              minWidth: 30,
+                            }}
+                          >
+                            {pct}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {/* Total row */}
+                <tr
+                  style={{
+                    background: "#ede9fe",
+                    borderTop: "2px solid #7c3aed",
+                    fontWeight: 700,
+                  }}
+                >
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #c4b5fd",
+                      fontWeight: 700,
+                      color: "#5b21b6",
+                      fontSize: 13,
+                    }}
+                  >
+                    कुल योग / Grand Total
+                  </td>
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #c4b5fd",
+                      textAlign: "center",
+                      fontWeight: 800,
+                      fontSize: 15,
+                      color: "#5b21b6",
+                    }}
+                  >
+                    {monthlyResult.total}
+                  </td>
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #c4b5fd",
+                      textAlign: "center",
+                      color: "#6b7280",
+                      fontWeight: 700,
+                    }}
+                  >
+                    360
+                  </td>
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #c4b5fd",
+                      textAlign: "center",
+                    }}
+                  >
+                    <span
+                      style={{
+                        background: "#7c3aed",
+                        color: "#fff",
+                        borderRadius: 4,
+                        padding: "3px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      {Math.round((monthlyResult.total / 360) * 100)}%
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Final result footer */}
+          <div
+            style={{
+              background: "#f3e8ff",
+              borderTop: "1px solid #c4b5fd",
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <div style={{ fontSize: 12.5, color: "#5b21b6" }}>
+              <strong>सूत्र / Formula:</strong> कुल अंक (Total {monthlyResult.total}
+              ) ÷ 36 ={" "}
+              <strong
+                style={{
+                  fontSize: 15,
+                  color: "#7c3aed",
+                }}
+              >
+                {monthlyResult.final.toFixed(2)}
+              </strong>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "#5b21b6",
+                  fontWeight: 600,
+                }}
+              >
+                मासिक परिणाम (Monthly Result):
+              </span>
+              <span
+                style={{
+                  background: "#7c3aed",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "4px 14px",
+                  fontWeight: 800,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                }}
+              >
+                <span id="monthlyResultFooter">
+                  {monthlyResult.final.toFixed(2)}
+                </span>{" "}
+                / 10
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Half Yearly Result Panel */}
+      {halfYearlyResult && (
+        <div
+          style={{
+            marginTop: 12,
+            background: "#f0f9ff",
+            border: "1px solid #7dd3fc",
+            borderLeft: "4px solid #0284c7",
+            borderRadius: 6,
+            overflow: "hidden",
+          }}
+          data-ocid="mark_entry.halfyearly_panel"
+        >
+          {/* Panel header */}
+          <div
+            style={{
+              background: "linear-gradient(90deg, #0284c7 0%, #0369a1 100%)",
+              color: "#fff",
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13.5 }}>
+                अर्धवार्षिक परिणाम सारांश / Half Yearly Result Summary
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.85, marginTop: 1 }}>
+                सभी विषयों के अंकों का योग (All subjects combined) | विषय:{" "}
+                {halfYearlyResult.subjectCount}
+              </div>
+            </div>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                border: "1px solid rgba(255,255,255,0.3)",
+                borderRadius: 6,
+                padding: "6px 16px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 10, opacity: 0.85 }}>
+                अर्धवार्षिक परिणाम
+              </div>
+              <div
+                id="halfYearlyResult"
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  letterSpacing: 0.5,
+                  lineHeight: 1.2,
+                }}
+                data-ocid="mark_entry.halfyearly_card"
+              >
+                {halfYearlyResult.final.toFixed(2)}
+              </div>
+              <div style={{ fontSize: 10, opacity: 0.85 }}>/ 20</div>
+            </div>
+          </div>
+
+          {/* Subject marks table */}
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 12.5,
+              }}
+            >
+              <thead>
+                <tr style={{ background: "#e0f2fe", color: "#0369a1" }}>
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      border: "1px solid #7dd3fc",
+                      textAlign: "left",
+                    }}
+                  >
+                    विषय / Subject
+                  </th>
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      border: "1px solid #7dd3fc",
+                    }}
+                  >
+                    अंक / Marks
+                  </th>
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      border: "1px solid #7dd3fc",
+                    }}
+                  >
+                    अधिकतम / Max
+                  </th>
+                  <th
+                    style={{
+                      ...thStyle,
+                      background: "#e0f2fe",
+                      color: "#0369a1",
+                      border: "1px solid #7dd3fc",
+                    }}
+                  >
+                    स्थिति / Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {halfYearlyResult.subjectMarks.map((s, idx) => {
+                  const pct = Math.round((s.marks / 60) * 100);
+                  return (
+                    <tr
+                      key={s.key}
+                      style={{ background: idx % 2 === 0 ? "#fff" : "#f0f9ff" }}
+                    >
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #bae6fd",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <span style={{ color: "#0369a1" }}>{s.labelHi}</span>
+                        <span
+                          style={{
+                            color: "#9ca3af",
+                            fontWeight: 400,
+                            marginLeft: 6,
+                            fontSize: 11.5,
+                          }}
+                        >
+                          ({s.key})
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #bae6fd",
+                          textAlign: "center",
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: s.marks > 0 ? "#0369a1" : "#9ca3af",
+                        }}
+                      >
+                        {s.marks}
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #bae6fd",
+                          textAlign: "center",
+                          color: "#6b7280",
+                        }}
+                      >
+                        60
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          border: "1px solid #bae6fd",
+                          textAlign: "center",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            justifyContent: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 60,
+                              height: 6,
+                              background: "#bae6fd",
+                              borderRadius: 3,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${pct}%`,
+                                height: "100%",
+                                background:
+                                  pct >= 60
+                                    ? "#16a34a"
+                                    : pct >= 33
+                                      ? "#0284c7"
+                                      : "#dc2626",
+                                borderRadius: 3,
+                                transition: "width 0.3s",
+                              }}
+                            />
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color:
+                                pct >= 60
+                                  ? "#16a34a"
+                                  : pct >= 33
+                                    ? "#0284c7"
+                                    : s.marks === 0
+                                      ? "#9ca3af"
+                                      : "#dc2626",
+                              minWidth: 30,
+                            }}
+                          >
+                            {pct}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {/* Total row */}
+                <tr
+                  style={{
+                    background: "#e0f2fe",
+                    borderTop: "2px solid #0284c7",
+                    fontWeight: 700,
+                  }}
+                >
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #7dd3fc",
+                      fontWeight: 700,
+                      color: "#0369a1",
+                      fontSize: 13,
+                    }}
+                  >
+                    कुल योग / Grand Total
+                  </td>
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #7dd3fc",
+                      textAlign: "center",
+                      fontWeight: 800,
+                      fontSize: 15,
+                      color: "#0369a1",
+                    }}
+                  >
+                    {halfYearlyResult.total}
+                  </td>
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #7dd3fc",
+                      textAlign: "center",
+                      color: "#6b7280",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {halfYearlyResult.subjectCount * 60}
+                  </td>
+                  <td
+                    style={{
+                      ...tdStyle,
+                      border: "1px solid #7dd3fc",
+                      textAlign: "center",
+                    }}
+                  >
+                    <span
+                      style={{
+                        background: "#0284c7",
+                        color: "#fff",
+                        borderRadius: 4,
+                        padding: "3px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      {Math.round(
+                        (halfYearlyResult.total /
+                          (halfYearlyResult.subjectCount * 60)) *
+                          100,
+                      )}
+                      %
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Final result footer */}
+          <div
+            style={{
+              background: "#e0f2fe",
+              borderTop: "1px solid #7dd3fc",
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <div style={{ fontSize: 12.5, color: "#0369a1" }}>
+              <strong>सूत्र / Formula:</strong> कुल अंक ({halfYearlyResult.total}) ÷
+              ({halfYearlyResult.subjectCount} × 3) ={" "}
+              <strong style={{ fontSize: 15, color: "#0284c7" }}>
+                {halfYearlyResult.final.toFixed(2)}
+              </strong>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "#0369a1", fontWeight: 600 }}>
+                अर्धवार्षिक परिणाम (Half Yearly Result):
+              </span>
+              <span
+                style={{
+                  background: "#0284c7",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "4px 14px",
+                  fontWeight: 800,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                }}
+              >
+                <span id="halfYearlyResultFooter">
+                  {halfYearlyResult.final.toFixed(2)}
+                </span>{" "}
+                / 20
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
-      {searched && rows.length > 0 && (
+      {searched && filteredRows.length > 0 && (
         <div
           style={{
             marginTop: 12,
@@ -590,6 +1549,7 @@ export function MarkEntryView({ role }: { role: Role }) {
                     fontSize: 12,
                     fontWeight: 600,
                   }}
+                  data-ocid="mark_entry.success_state"
                 >
                   ✓ Saved!
                 </span>
@@ -611,6 +1571,7 @@ export function MarkEntryView({ role }: { role: Role }) {
                   fontSize: 12.5,
                   cursor: selectedIds.size === 0 ? "not-allowed" : "pointer",
                 }}
+                data-ocid="mark_entry.save_button"
               >
                 <SaveAll style={{ width: 14, height: 14 }} />
                 Save Selected ({selectedIds.size})
@@ -897,6 +1858,7 @@ export function MarkEntryView({ role }: { role: Role }) {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 style={paginationBtn(page === 1)}
+                data-ocid="mark_entry.pagination_prev"
               >
                 <ChevronLeft style={{ width: 14, height: 14 }} />
               </button>
@@ -924,6 +1886,7 @@ export function MarkEntryView({ role }: { role: Role }) {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 style={paginationBtn(page === totalPages)}
+                data-ocid="mark_entry.pagination_next"
               >
                 <ChevronRight style={{ width: 14, height: 14 }} />
               </button>
@@ -935,7 +1898,7 @@ export function MarkEntryView({ role }: { role: Role }) {
         </div>
       )}
 
-      {searched && rows.length === 0 && (
+      {searched && filteredRows.length === 0 && (
         <div
           style={{
             textAlign: "center",
@@ -946,6 +1909,7 @@ export function MarkEntryView({ role }: { role: Role }) {
             borderRadius: 4,
             border: "1px solid #e5e7eb",
           }}
+          data-ocid="mark_entry.empty_state"
         >
           No students found. Please add students from Student Management.
         </div>
