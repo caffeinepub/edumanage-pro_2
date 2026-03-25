@@ -1,4 +1,3 @@
-import { students as mockStudents } from "@/data/mockData";
 import type { Role } from "@/hooks/useAuth";
 import {
   ChevronLeft,
@@ -136,27 +135,19 @@ interface StudentRow {
 }
 
 function getStudentList() {
-  const storedExtra: { id: number; name: string; rollNo: string }[] = (() => {
-    try {
-      const raw = localStorage.getItem("students");
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed;
-    } catch {
-      return [];
-    }
-  })();
-  const mockIds = new Set(mockStudents.map((s) => s.id));
-  const uniqueExtra = storedExtra.filter((s) => !mockIds.has(s.id));
-  return [
-    ...mockStudents.map((s) => ({ id: s.id, name: s.name, rollNo: s.rollNo })),
-    ...uniqueExtra.map((s) => ({
+  try {
+    const raw = localStorage.getItem("students");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((s: { id: number; name: string; rollNo?: string }) => ({
       id: s.id,
       name: s.name,
-      rollNo: s.rollNo ?? `EXT${s.id}`,
-    })),
-  ];
+      rollNo: s.rollNo ?? `S${s.id}`,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function buildRows(examKey: ExamKey, subject: string): StudentRow[] {
@@ -425,7 +416,6 @@ export function MarkEntryView({ role }: { role: Role }) {
     const subjectCount = monthlySubjects.length;
     const final = subjectCount > 0 ? total / (subjectCount * 6) : 0;
     return { subjectMarks, total, final };
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   }, [activeTab, selectedStudent, rows, subject, monthlySubjects]);
 
   // Half Yearly result calculation — reacts to rows changes and selected student
@@ -451,7 +441,6 @@ export function MarkEntryView({ role }: { role: Role }) {
     const subjectCount = monthlySubjects.length; // 4 or 6
     const final = subjectCount > 0 ? total / (subjectCount * 3) : 0;
     return { subjectMarks, total, final, subjectCount };
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   }, [activeTab, selectedStudent, rows, subject, monthlySubjects]);
 
   if (role === "student") {

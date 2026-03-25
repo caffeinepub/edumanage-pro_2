@@ -44,7 +44,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const LS_KEY = "ems_added_students";
 const LS_DELETED_KEY = "ems_deleted_ids";
@@ -58,14 +58,14 @@ interface Student {
   rollNo: string;
   attendance: number;
   grade: string;
-  fatherName?: string;
-  motherName?: string;
+  father?: string;
+  mother?: string;
   samagraId?: string;
   aadharNo?: string;
   scholarNo?: string;
-  nameHindi?: string;
-  fatherNameHindi?: string;
-  motherNameHindi?: string;
+  nameHin?: string;
+  fatherHin?: string;
+  motherHin?: string;
   dob?: string; // stored as YYYY-MM-DD
 }
 
@@ -251,6 +251,12 @@ export function StudentsView({
         )
       : allStudents;
 
+  // Sync full student list to "students" key for Mark Entry and Report Card
+  // biome-ignore lint/correctness/useExhaustiveDependencies: allStudents is derived from these three deps
+  useEffect(() => {
+    localStorage.setItem("students", JSON.stringify(allStudents));
+  }, [addedStudents, deletedIds, studentOverrides]);
+
   const filtered = baseList.filter(
     (s) =>
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -285,18 +291,18 @@ export function StudentsView({
   function openEditDialog(student: Student) {
     setEditingStudent(student);
     setFormName(student.name);
-    setFormNameHindi(student.nameHindi ?? transliterateToHindi(student.name));
+    setFormNameHindi(student.nameHin ?? transliterateToHindi(student.name));
     setFormNameHindiManual(false);
     setFormClass(student.class);
     setFormSection(student.section);
-    setFormFatherName(student.fatherName ?? "");
+    setFormFatherName(student.father ?? "");
     setFormFatherNameHindi(
-      student.fatherNameHindi ?? transliterateToHindi(student.fatherName ?? ""),
+      student.fatherHin ?? transliterateToHindi(student.father ?? ""),
     );
     setFormFatherNameHindiManual(false);
-    setFormMotherName(student.motherName ?? "");
+    setFormMotherName(student.mother ?? "");
     setFormMotherNameHindi(
-      student.motherNameHindi ?? transliterateToHindi(student.motherName ?? ""),
+      student.motherHin ?? transliterateToHindi(student.mother ?? ""),
     );
     setFormMotherNameHindiManual(false);
     setFormSamagraId(student.samagraId ?? "");
@@ -309,14 +315,14 @@ export function StudentsView({
   function handleSaveStudent(e: React.FormEvent) {
     e.preventDefault();
     const extraFields = {
-      fatherName: formFatherName.trim(),
-      fatherNameHindi: formFatherNameHindi.trim(),
-      motherName: formMotherName.trim(),
-      motherNameHindi: formMotherNameHindi.trim(),
+      father: formFatherName.trim(),
+      fatherHin: formFatherNameHindi.trim(),
+      mother: formMotherName.trim(),
+      motherHin: formMotherNameHindi.trim(),
       samagraId: formSamagraId.trim(),
       aadharNo: formAadharNo.trim(),
       scholarNo: formScholarNo.trim(),
-      nameHindi: formNameHindi.trim(),
+      nameHin: formNameHindi.trim(),
       dob: formDob,
     };
 

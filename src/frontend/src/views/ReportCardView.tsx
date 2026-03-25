@@ -1,4 +1,3 @@
-import { students as mockStudents } from "@/data/mockData";
 import {
   dateToHindiWords,
   dateToNumericFormat,
@@ -13,12 +12,22 @@ interface Student {
   rollNo?: string;
   enrollmentNo?: string;
   dob?: string;
+  father?: string;
+  mother?: string;
+  fatherHin?: string;
+  motherHin?: string;
+  nameHin?: string;
+  samagraId?: string;
+  aadharNo?: string;
+  scholarNo?: string;
 }
 
 interface StudentProfile {
-  nameHindi?: string;
-  fatherName?: string;
-  motherName?: string;
+  nameHin?: string;
+  father?: string;
+  mother?: string;
+  fatherHin?: string;
+  motherHin?: string;
   dob?: string;
   dobWords?: string;
   samagraId?: string;
@@ -173,6 +182,35 @@ function getGrade(marks: number, max: number): string {
   return "F";
 }
 
+// MP Board grade scale for summary section
+function getMPGrade(percentage: number): string {
+  if (percentage > 85) return "A+";
+  if (percentage >= 76) return "A";
+  if (percentage >= 66) return "B+";
+  if (percentage >= 56) return "B";
+  if (percentage >= 51) return "C+";
+  if (percentage >= 46) return "C";
+  if (percentage >= 33) return "D";
+  return "E";
+}
+
+function getNextClass(cls: string): string {
+  const classMap: Record<string, string> = {
+    "1": "2",
+    "2": "3",
+    "3": "4",
+    "4": "5",
+    "5": "6",
+    "6": "7",
+    "7": "8",
+    "8": "9",
+    "9": "10",
+    "10": "11",
+    "11": "12",
+  };
+  return classMap[cls] || String(Number(cls) + 1);
+}
+
 function today(): string {
   const d = new Date();
   const dd = String(d.getDate()).padStart(2, "0");
@@ -198,6 +236,7 @@ export function ReportCardView({ role: _role }: { role: string }) {
   const [personalSkills, setPersonalSkills] = useState<
     Record<string, PersonalSkills>
   >({});
+  const [promotionClass, setPromotionClass] = useState<string>("");
 
   useEffect(() => {
     if (selectedId) {
@@ -206,26 +245,13 @@ export function ReportCardView({ role: _role }: { role: string }) {
   }, [selectedId]);
 
   useEffect(() => {
-    const storedRaw = localStorage.getItem("students");
-    let storedStudents: Student[] = [];
+    let s: Student[] = [];
     try {
-      if (storedRaw) storedStudents = JSON.parse(storedRaw);
+      const raw = localStorage.getItem("students");
+      if (raw) s = JSON.parse(raw) as Student[];
     } catch {
-      storedStudents = [];
+      s = [];
     }
-    const mockIds = new Set(mockStudents.map((s) => s.id));
-    const uniqueExtra = storedStudents.filter((s) => !mockIds.has(s.id));
-    const s: Student[] = [
-      ...mockStudents.map((s) => ({
-        id: s.id,
-        name: s.name,
-        class: s.class ?? "",
-        section: s.section ?? "",
-        rollNo: s.rollNo,
-        dob: (s as unknown as { dob?: string }).dob,
-      })),
-      ...uniqueExtra,
-    ];
     const m = buildMarkEntryData();
     const p = JSON.parse(
       localStorage.getItem("studentProfiles") || "{}",
@@ -241,10 +267,47 @@ export function ReportCardView({ role: _role }: { role: string }) {
     setProfiles(p);
     setCoScholastic(cs);
     setPersonalSkills(ps);
+
+    // Auto-load selected student from localStorage
+    const savedId = localStorage.getItem("selectedStudent");
+    if (savedId) {
+      setSelectedId(savedId);
+    }
   }, []);
 
   const student = students.find((s) => String(s.id) === selectedId);
-  const profile: StudentProfile = profiles[selectedId] || {};
+
+  // Auto-fill next class when student changes
+  useEffect(() => {
+    if (student?.class) {
+      setPromotionClass(getNextClass(student.class));
+    } else if (selectedClass) {
+      setPromotionClass(getNextClass(selectedClass));
+    }
+  }, [student, selectedClass]);
+
+  // Merge stored profile with student data as fallback for auto-fill
+  const storedProfile: StudentProfile = profiles[selectedId] || {};
+  const profile: StudentProfile = {
+    nameHin: storedProfile.nameHin || student?.nameHin,
+    father: storedProfile.father || student?.father,
+    mother: storedProfile.mother || student?.mother,
+    fatherHin: storedProfile.fatherHin || student?.fatherHin,
+    motherHin: storedProfile.motherHin || student?.motherHin,
+    dob:
+      storedProfile.dob ||
+      (student?.dob ? dateToNumericFormat(student.dob) : undefined),
+    dobWords:
+      storedProfile.dobWords ||
+      (student?.dob ? dateToHindiWords(student.dob) : undefined),
+    samagraId: storedProfile.samagraId || student?.samagraId,
+    aadhaarId: storedProfile.aadhaarId || student?.aadharNo,
+    scholarNo: storedProfile.scholarNo || student?.scholarNo,
+    schoolName: storedProfile.schoolName,
+    block: storedProfile.block,
+    district: storedProfile.district,
+  };
+
   const studentMarks = markData[selectedId] || {};
   const cs: CoScholastic = coScholastic[selectedId] || {};
   const ps: PersonalSkills = personalSkills[selectedId] || {};
@@ -266,6 +329,9 @@ export function ReportCardView({ role: _role }: { role: string }) {
   const grandTotal = subjectTotals.reduce((acc, s) => acc + s.total, 0);
   const maxTotal = subjects.length * 100;
   const finalGrade = getGrade(grandTotal, maxTotal);
+  const percentage = maxTotal > 0 ? (grandTotal / maxTotal) * 100 : 0;
+  const mpGrade = getMPGrade(percentage);
+  const examResult = percentage >= 33 ? "उत्तीर्ण" : "अनुत्तीर्ण";
 
   // Subject-based grade helpers
   const hindiTotal = subjectTotals.find((s) => s.key === "hindi")?.total ?? 0;
@@ -296,6 +362,9 @@ export function ReportCardView({ role: _role }: { role: string }) {
   const psPunctuality = ps.punctuality || mathGrade;
   const psCooperation = ps.cooperation || lowerGrade(finalGrade);
 
+  const nameEng = student?.name || "";
+  const nameHin = student?.nameHin || student?.name || "";
+
   return (
     <>
       <style>{`
@@ -325,6 +394,14 @@ export function ReportCardView({ role: _role }: { role: string }) {
         .double-border { border: 3px double #000; padding: 8px; }
         .detail-table td { border: 1px solid #000; padding: 3px 6px; font-size: 11px; }
         .sig-line { border-top: 1px solid #000; width: 120px; }
+        .grade-summary-section { border: 2px solid #000; padding: 8px; margin-bottom: 12px; font-family: Arial, sans-serif; }
+        .grade-summary-section h4 { text-align: center; margin: 0 0 6px 0; font-size: 12px; font-weight: bold; text-decoration: underline; }
+        .grade-summary-section .note-line { font-size: 10px; margin-top: 6px; }
+        .grade-summary-section .result-line { font-size: 11px; margin-top: 8px; }
+        .promotion-input { border: none; border-bottom: 1px solid #000; background: transparent; font-size: 11px; outline: none; width: 60px; text-align: center; font-family: Arial, sans-serif; }
+        @media print {
+          .promotion-input { border: none; border-bottom: 1px solid #000; }
+        }
       `}</style>
 
       {/* Screen-only controls */}
@@ -453,38 +530,56 @@ export function ReportCardView({ role: _role }: { role: string }) {
             >
               <tbody>
                 <tr>
-                  <td style={{ width: "25%", fontWeight: "bold" }}>
-                    छात्र का नाम (हिंदी)
+                  <td style={{ width: "30%", fontWeight: "bold" }}>
+                    छात्र का नाम / Student Name
                   </td>
-                  <td style={{ width: "25%" }}>
-                    {profile.nameHindi || student?.name || ""}
+                  <td colSpan={3}>
+                    <span id="rcNameEng">{nameEng}</span>
+                    {nameHin && nameHin !== nameEng ? (
+                      <>
+                        {" "}
+                        / <span id="rcNameHin">{nameHin}</span>
+                      </>
+                    ) : (
+                      <span id="rcNameHin" style={{ display: "none" }}>
+                        {nameHin}
+                      </span>
+                    )}
                   </td>
-                  <td style={{ width: "25%", fontWeight: "bold" }}>
-                    Student Name (English)
-                  </td>
-                  <td style={{ width: "25%" }}>{student?.name || ""}</td>
                 </tr>
                 <tr>
                   <td style={{ fontWeight: "bold" }}>पिता का नाम</td>
-                  <td>{profile.fatherName || ""}</td>
+                  <td>
+                    <span id="rcFather">
+                      {profile.fatherHin ||
+                        student?.fatherHin ||
+                        student?.father ||
+                        ""}
+                    </span>
+                  </td>
                   <td style={{ fontWeight: "bold" }}>माता का नाम</td>
-                  <td>{profile.motherName || ""}</td>
+                  <td>
+                    <span id="rcMother">
+                      {profile.motherHin ||
+                        student?.motherHin ||
+                        student?.mother ||
+                        ""}
+                    </span>
+                  </td>
                 </tr>
                 <tr>
                   <td style={{ fontWeight: "bold" }}>जन्म तिथि (अंकों में)</td>
                   <td>
-                    {profile.dob ||
-                      (student?.dob ? dateToNumericFormat(student.dob) : "")}
+                    <span id="rcDob">{profile.dob || ""}</span>
                   </td>
                   <td style={{ fontWeight: "bold" }}>जन्म तिथि (शब्दों में)</td>
-                  <td>
-                    {profile.dobWords ||
-                      (student?.dob ? dateToHindiWords(student.dob) : "")}
-                  </td>
+                  <td>{profile.dobWords || ""}</td>
                 </tr>
                 <tr>
                   <td style={{ fontWeight: "bold" }}>समग्र आई.डी.</td>
-                  <td>{profile.samagraId || ""}</td>
+                  <td>
+                    <span id="rcSamagra">{profile.samagraId || ""}</span>
+                  </td>
                   <td style={{ fontWeight: "bold" }}>आधार नं.</td>
                   <td>{profile.aadhaarId || ""}</td>
                 </tr>
@@ -664,45 +759,149 @@ export function ReportCardView({ role: _role }: { role: string }) {
             </div>
           </div>
 
-          {/* Grade Chart */}
-          <div style={{ marginBottom: 10 }}>
-            <div
+          {/* ===== शैक्षिक मूल्यांकन हेतु संचयी ग्रेड का विवरण ===== */}
+          <div className="grade-summary-section">
+            <h4>शैक्षिक मूल्यांकन हेतु संचयी ग्रेड का विवरण</h4>
+
+            {/* Grade Table */}
+            <table
               style={{
-                fontWeight: "bold",
+                borderCollapse: "collapse",
+                width: "100%",
+                textAlign: "center",
                 fontSize: 11,
-                marginBottom: 3,
-                textDecoration: "underline",
               }}
             >
-              श्रेणी चार्ट (Grade Chart)
-            </div>
-            <table className="rc-table">
               <thead>
-                <tr>
-                  <th>A+ (91–100)</th>
-                  <th>A (81–90)</th>
-                  <th>B+ (71–80)</th>
-                  <th>B (61–70)</th>
-                  <th>C (51–60)</th>
-                  <th>D (33–50)</th>
-                  <th>F (0–32)</th>
+                <tr style={{ background: "#f5d7a1" }}>
+                  <th
+                    style={{
+                      border: "1px solid #000",
+                      padding: "3px 4px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ग्रेड
+                  </th>
+                  {["A+", "A", "B+", "B", "C+", "C", "D", "E"].map((g) => (
+                    <th
+                      key={g}
+                      style={{
+                        border: "1px solid #000",
+                        padding: "3px 4px",
+                        fontWeight: "bold",
+                        background: mpGrade === g ? "#c6efce" : "#f5d7a1",
+                      }}
+                    >
+                      {g}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td style={{ textAlign: "center" }}>उत्कृष्ट</td>
-                  <td style={{ textAlign: "center" }}>अति उत्तम</td>
-                  <td style={{ textAlign: "center" }}>उत्तम</td>
-                  <td style={{ textAlign: "center" }}>अच्छा</td>
-                  <td style={{ textAlign: "center" }}>संतोषजनक</td>
-                  <td style={{ textAlign: "center" }}>औसत</td>
-                  <td style={{ textAlign: "center" }}>अनुत्तीर्ण</td>
+                  <td
+                    style={{
+                      border: "1px solid #000",
+                      padding: "3px 4px",
+                      fontWeight: "bold",
+                      fontSize: 10,
+                    }}
+                  >
+                    प्रतिशत
+                  </td>
+                  {(
+                    [
+                      ["A+", "85 से अधिक"],
+                      ["A", "76–85"],
+                      ["B+", "66–75"],
+                      ["B", "56–65"],
+                      ["C+", "51–55"],
+                      ["C", "46–50"],
+                      ["D", "33–45"],
+                      ["E", "33 से कम"],
+                    ] as [string, string][]
+                  ).map(([grade, range]) => (
+                    <td
+                      key={grade}
+                      style={{
+                        border: "1px solid #000",
+                        padding: "3px 4px",
+                        fontSize: 10,
+                        background:
+                          mpGrade === grade ? "#c6efce" : "transparent",
+                      }}
+                    >
+                      {range}
+                    </td>
+                  ))}
                 </tr>
               </tbody>
             </table>
-          </div>
 
-          {/* Footer */}
+            {/* Note */}
+            <p className="note-line">
+              <strong>नोट -</strong> वार्षिक परीक्षा फल निर्धारण में सह-शैक्षिक क्षेत्र एवं
+              व्यक्तिगत सामाजिक गुणों में अंकित ग्रेड को नहीं जोड़ा गया है।
+            </p>
+
+            {/* Result and Promotion lines */}
+            <div
+              style={{
+                marginTop: 10,
+                fontSize: 11,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                alignItems: "baseline",
+              }}
+            >
+              <span>
+                <strong>विद्यार्थी का परीक्षाफल एवं ग्रेड</strong> -{" "}
+                <span
+                  style={{
+                    borderBottom: "1px solid #000",
+                    minWidth: 140,
+                    display: "inline-block",
+                    fontWeight: "bold",
+                    paddingBottom: 1,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {grandTotal > 0
+                    ? `${examResult} / ${mpGrade} (${percentage.toFixed(1)}%)`
+                    : ""}
+                </span>
+              </span>
+              <span style={{ marginLeft: 16 }}>
+                <strong>विद्यार्थी को कक्षा</strong>{" "}
+                <input
+                  type="text"
+                  className="promotion-input"
+                  value={promotionClass}
+                  onChange={(e) => setPromotionClass(e.target.value)}
+                  placeholder="__"
+                  style={{
+                    width: 50,
+                    borderBottom: "1px solid #000",
+                    border: "none",
+                    borderBottomWidth: 1,
+                    borderBottomStyle: "solid",
+                    borderBottomColor: "#000",
+                    background: "transparent",
+                    fontSize: 11,
+                    textAlign: "center",
+                    outline: "none",
+                    fontFamily: "Arial, sans-serif",
+                  }}
+                />{" "}
+                <strong>में कक्षोन्नत किया जाता है।</strong>
+              </span>
+            </div>
+          </div>
+          {/* ===== END grade summary section ===== */}
+
+          {/* Footer / Signatures */}
           <div
             style={{
               display: "flex",
