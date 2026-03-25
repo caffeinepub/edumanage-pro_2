@@ -182,7 +182,6 @@ function getGrade(marks: number, max: number): string {
   return "F";
 }
 
-// MP Board grade scale for summary section
 function getMPGrade(percentage: number): string {
   if (percentage > 85) return "A+";
   if (percentage >= 76) return "A";
@@ -268,7 +267,6 @@ export function ReportCardView({ role: _role }: { role: string }) {
     setCoScholastic(cs);
     setPersonalSkills(ps);
 
-    // Auto-load selected student from localStorage
     const savedId = localStorage.getItem("selectedStudent");
     if (savedId) {
       setSelectedId(savedId);
@@ -277,7 +275,6 @@ export function ReportCardView({ role: _role }: { role: string }) {
 
   const student = students.find((s) => String(s.id) === selectedId);
 
-  // Auto-fill next class when student changes
   useEffect(() => {
     if (student?.class) {
       setPromotionClass(getNextClass(student.class));
@@ -286,7 +283,6 @@ export function ReportCardView({ role: _role }: { role: string }) {
     }
   }, [student, selectedClass]);
 
-  // Merge stored profile with student data as fallback for auto-fill
   const storedProfile: StudentProfile = profiles[selectedId] || {};
   const profile: StudentProfile = {
     nameHin: storedProfile.nameHin || student?.nameHin,
@@ -314,10 +310,13 @@ export function ReportCardView({ role: _role }: { role: string }) {
 
   const subjects = SUBJECTS_BY_CLASS[selectedClass] || SUBJECTS_BY_CLASS["6"];
   const subjectTotals = subjects.map((sub) => {
-    const monthlyRaw = studentMarks.monthly?.[sub.key] ?? 0;
-    const halfRaw = studentMarks.halfYearly?.[sub.key] ?? 0;
-    const annualRaw = studentMarks.annual?.[sub.key] ?? 0;
-    const projectRaw = studentMarks.project?.[sub.key] ?? 0;
+    const monthlyRaw =
+      studentMarks.monthly?.[sub.key as keyof SubjectMarks] ?? 0;
+    const halfRaw =
+      studentMarks.halfYearly?.[sub.key as keyof SubjectMarks] ?? 0;
+    const annualRaw = studentMarks.annual?.[sub.key as keyof SubjectMarks] ?? 0;
+    const projectRaw =
+      studentMarks.project?.[sub.key as keyof SubjectMarks] ?? 0;
     const monthly = Math.round((monthlyRaw / 60) * 10);
     const half = Math.round((halfRaw / 60) * 20);
     const annual = annualRaw;
@@ -333,7 +332,6 @@ export function ReportCardView({ role: _role }: { role: string }) {
   const mpGrade = getMPGrade(percentage);
   const examResult = percentage >= 33 ? "उत्तीर्ण" : "अनुत्तीर्ण";
 
-  // Subject-based grade helpers
   const hindiTotal = subjectTotals.find((s) => s.key === "hindi")?.total ?? 0;
   const englishTotal =
     subjectTotals.find((s) => s.key === "english")?.total ?? 0;
@@ -348,14 +346,12 @@ export function ReportCardView({ role: _role }: { role: string }) {
   const mathGrade = getGrade(mathTotal, 100);
   const sciGrade = getGrade(sciTotal, 100);
 
-  // Co-Scholastic auto grades (manual saved value takes priority)
   const csLiterary = cs.literary || hindiGrade;
   const csCultural = cs.cultural || englishGrade;
   const csScientific = cs.scientific || sciGrade;
   const csCreative = cs.creative || mathGrade;
   const csSports = cs.sports || lowerGrade(finalGrade);
 
-  // Personal Skills auto grades (manual saved value takes priority)
   const psCleanliness = ps.cleanliness || hindiGrade;
   const psDiscipline = ps.discipline || lowerGrade(finalGrade);
   const psHonesty = ps.honesty || englishGrade;
@@ -365,42 +361,274 @@ export function ReportCardView({ role: _role }: { role: string }) {
   const nameEng = student?.name || "";
   const nameHin = student?.nameHin || student?.name || "";
 
+  const mpGradeList = ["A+", "A", "B+", "B", "C+", "C", "D", "E"] as const;
+  const gradeRanges: Record<string, string> = {
+    "A+": "85 से अधिक",
+    A: "76–85",
+    "B+": "66–75",
+    B: "56–65",
+    "C+": "51–55",
+    C: "46–50",
+    D: "33–45",
+    E: "33 से कम",
+  };
+
   return (
     <>
       <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { margin: 0; background: #fff; }
-          .report-card-container {
-            width: 210mm;
-            min-height: 297mm;
-            margin: 0;
-            padding: 10mm;
-            font-size: 11px;
-            color: #000;
-            background: #fff;
-          }
-          aside, header, nav { display: none !important; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');
+
+        /* ===== Base font ===== */
         .report-card-container * {
-          font-family: Arial, sans-serif;
+          font-family: 'Noto Sans Devanagari', Arial, sans-serif;
           color: #000;
           box-sizing: border-box;
         }
+
+        /* ===== Outer / Inner decorative border ===== */
+        .rc-outer-border {
+          border: 4px double #000;
+          padding: 5px;
+          background: #fff;
+          position: relative;
+        }
+        .rc-inner-border {
+          border: 1.5px solid #555;
+          padding: 10mm;
+          position: relative;
+          overflow: hidden;
+        }
+        /* Watermark */
+        .rc-inner-border::before {
+          content: 'मध्यप्रदेश शासन';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-30deg);
+          font-size: 68px;
+          font-weight: 700;
+          color: rgba(0, 0, 0, 0.04);
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 0;
+          font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+          letter-spacing: 4px;
+        }
+        /* Decorative corner marks */
+        .rc-inner-border::after {
+          content: '✦';
+          position: absolute;
+          top: 4px; left: 6px;
+          font-size: 14px;
+          color: #555;
+          opacity: 0.5;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .rc-corner-tr, .rc-corner-bl, .rc-corner-br {
+          position: absolute;
+          font-size: 14px;
+          color: #555;
+          opacity: 0.5;
+          pointer-events: none;
+          z-index: 2;
+        }
+        .rc-corner-tr { top: 4px; right: 6px; }
+        .rc-corner-bl { bottom: 4px; left: 6px; }
+        .rc-corner-br { bottom: 4px; right: 6px; }
+
+        /* All content above watermark */
+        .rc-content {
+          position: relative;
+          z-index: 1;
+        }
+
+        /* ===== Tables ===== */
         .rc-table { border-collapse: collapse; width: 100%; }
-        .rc-table th, .rc-table td { border: 1px solid #000; padding: 3px 5px; font-size: 11px; }
-        .rc-table th { background: #e8e8e8; font-weight: bold; text-align: center; }
-        .rc-input { border: none; background: transparent; width: 100%; font-size: 11px; outline: none; }
-        .double-border { border: 3px double #000; padding: 8px; }
-        .detail-table td { border: 1px solid #000; padding: 3px 6px; font-size: 11px; }
-        .sig-line { border-top: 1px solid #000; width: 120px; }
-        .grade-summary-section { border: 2px solid #000; padding: 8px; margin-bottom: 12px; font-family: Arial, sans-serif; }
-        .grade-summary-section h4 { text-align: center; margin: 0 0 6px 0; font-size: 12px; font-weight: bold; text-decoration: underline; }
-        .grade-summary-section .note-line { font-size: 10px; margin-top: 6px; }
-        .grade-summary-section .result-line { font-size: 11px; margin-top: 8px; }
-        .promotion-input { border: none; border-bottom: 1px solid #000; background: transparent; font-size: 11px; outline: none; width: 60px; text-align: center; font-family: Arial, sans-serif; }
+        .rc-table th, .rc-table td {
+          border: 1px solid #000;
+          padding: 7px 6px;
+          font-size: 13px;
+          line-height: 1.5;
+          text-align: center;
+        }
+        .rc-table th {
+          background: #fff;
+          color: #000;
+          font-weight: bold;
+          text-align: center;
+        }
+        .rc-table tbody tr:nth-child(even) td { background: #f5f5f5; }
+        .rc-table tbody tr:nth-child(odd) td { background: #fff; }
+
+        /* Detail/student info table */
+        .detail-table { width: 100%; border-collapse: collapse; }
+        .detail-table td {
+          border: 1px solid #555;
+          padding: 6px 8px;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        /* Section heading bar */
+        .rc-section-heading {
+          background: #fff;
+          color: #000;
+          font-weight: bold;
+          font-size: 14px;
+          text-align: center;
+          padding: 5px 10px;
+          letter-spacing: 0.5px;
+          margin-bottom: 0;
+          border-bottom: 1.5px solid #555;
+        }
+
+        /* Co-scholastic / personal skills box */
+        .co-section-box {
+          border: 1.5px solid #555;
+          border-radius: 2px;
+          overflow: hidden;
+        }
+        .co-section-box .rc-table th { background: #f0f0f0; color: #000; }
+        .co-section-box .rc-table td { font-size: 13px; }
+
+        /* Dotted field */
+        .rc-dotted-field {
+          
+          min-width: 100px;
+          display: inline-block;
+          min-height: 18px;
+        }
+
+        /* Grand total row */
+        .rc-grand-total td {
+          background: #f0f0f0 !important;
+          font-weight: bold;
+        }
+
+        /* Grade summary section */
+        .grade-summary-section {
+          border: 1.5px solid #555;
+          margin-bottom: 12px;
+          overflow: hidden;
+        }
+        .grade-summary-inner {
+          padding: 8px 10px;
+        }
+        .grade-summary-section .note-line { font-size: 12px; margin-top: 6px; }
+        .grade-summary-section .result-line { font-size: 13px; margin-top: 8px; }
+        .promotion-input {
+          border: none;
+          border-bottom: 1.5px solid #000;
+          background: transparent;
+          font-size: 13px;
+          outline: none;
+          width: 60px;
+          text-align: center;
+          font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+        }
+        .sig-line { border-top: 1.5px solid #000; width: 130px; margin: 0 auto; }
+
+        /* ===== Print styles ===== */
         @media print {
-          .promotion-input { border: none; border-bottom: 1px solid #000; }
+          @page {
+            size: A4 portrait;
+            margin: 8mm 10mm;
+          }
+
+          .no-print { display: none !important; }
+
+          body { margin: 0; background: #fff; }
+
+          aside, header, nav, footer { display: none !important; }
+
+          .report-card-container {
+            width: 190mm !important;
+            max-width: 190mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: #fff !important;
+            font-size: 11px !important;
+            line-height: 1.3 !important;
+          }
+
+          /* Tighten outer/inner borders */
+          .rc-outer-border {
+            border: 3px double #000 !important;
+            padding: 3px !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+          }
+
+          .rc-inner-border {
+            border: 1px solid #555 !important;
+            padding: 4mm 5mm !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+          }
+
+          /* Tighten section headings */
+          .rc-section-heading {
+            font-size: 11px !important;
+            padding: 3px 6px !important;
+          }
+
+          /* Tighten table cells */
+          .rc-table th,
+          .rc-table td {
+            font-size: 10px !important;
+            padding: 3px 3px !important;
+            line-height: 1.3 !important;
+          }
+
+          .detail-table td {
+            font-size: 10px !important;
+            padding: 3px 5px !important;
+            line-height: 1.3 !important;
+          }
+
+          /* Remove bottom margins on sections */
+          .report-card-container > div > div > div {
+            margin-bottom: 5px !important;
+          }
+
+          /* Grade summary section */
+          .grade-summary-section .grade-summary-inner {
+            padding: 4px 6px !important;
+          }
+
+          .grade-summary-section .note-line {
+            font-size: 9px !important;
+            margin-top: 3px !important;
+          }
+
+          .grade-summary-section .result-line {
+            font-size: 10px !important;
+            margin-top: 4px !important;
+          }
+
+          /* Promotion input */
+          .promotion-input {
+            border: none !important;
+            border-bottom: 1px solid #000 !important;
+            font-size: 10px !important;
+          }
+
+          /* Signature area */
+          .sig-line {
+            width: 100px !important;
+          }
+
+          /* Prevent page breaks inside sections */
+          .rc-outer-border,
+          .rc-inner-border,
+          .rc-content,
+          .co-section-box,
+          .grade-summary-section {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
         }
       `}</style>
 
@@ -473,461 +701,620 @@ export function ReportCardView({ role: _role }: { role: string }) {
         </div>
       ) : (
         <div
-          className="report-card-container bg-white border border-gray-300 shadow-sm mx-auto"
+          className="report-card-container bg-white shadow-sm mx-auto"
           style={{
             maxWidth: "210mm",
-            padding: "10mm",
-            fontFamily: "Arial, sans-serif",
+            fontFamily: "'Noto Sans Devanagari', Arial, sans-serif",
           }}
         >
-          {/* Header */}
-          <div className="double-border text-center mb-3">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              {/* Left Logo */}
-              <img
-                src={LOGO_SRC}
-                alt="MP Board Logo"
-                width={80}
-                height={80}
-                style={{ objectFit: "contain", flexShrink: 0 }}
-              />
-              {/* Center Text */}
-              <div style={{ flex: 1, textAlign: "center" }}>
+          {/* Outer decorative double border */}
+          <div className="rc-outer-border">
+            <div className="rc-inner-border">
+              {/* Corner ornaments */}
+              <span className="rc-corner-tr" aria-hidden="true">
+                ✦
+              </span>
+              <span className="rc-corner-bl" aria-hidden="true">
+                ✦
+              </span>
+              <span className="rc-corner-br" aria-hidden="true">
+                ✦
+              </span>
+
+              {/* All content above watermark */}
+              <div className="rc-content">
+                {/* ===== Header ===== */}
+                <div style={{ textAlign: "center", marginBottom: 12 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 6,
+                    }}
+                  >
+                    {/* Left Logo */}
+                    <img
+                      src={LOGO_SRC}
+                      alt="MP Board Logo"
+                      width={80}
+                      height={80}
+                      style={{ objectFit: "contain", flexShrink: 0 }}
+                    />
+                    {/* Center Headings */}
+                    <div
+                      style={{
+                        flex: 1,
+                        textAlign: "center",
+                        padding: "0 12px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 22,
+                          fontWeight: "bold",
+                          letterSpacing: 1,
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        राज्य शिक्षा केन्द्र (म.प्र.)
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: "bold",
+                          marginTop: 4,
+                          borderBottom: "2px solid #000",
+                          display: "inline-block",
+                          paddingBottom: 2,
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        समग्र प्रगति पत्रक
+                      </div>
+                      <div
+                        style={{ fontSize: 13, marginTop: 5, color: "#333" }}
+                      >
+                        कक्षा - {student?.class || "6"} : सत्र 2025-26
+                      </div>
+                    </div>
+                    {/* Right Logo */}
+                    <img
+                      src={LOGO2_SRC}
+                      alt="SCERT Logo"
+                      width={80}
+                      height={80}
+                      style={{ objectFit: "contain", flexShrink: 0 }}
+                    />
+                  </div>
+                  {/* Decorative divider */}
+                  <div
+                    style={{
+                      height: 2,
+                      background: "#000",
+                      margin: "4px 0",
+                    }}
+                  />
+                </div>
+
+                {/* ===== Student Details ===== */}
+                <div style={{ border: "1.5px solid #555", marginBottom: 10 }}>
+                  <div className="rc-section-heading">
+                    छात्र विवरण (Student Details)
+                  </div>
+                  <table className="detail-table">
+                    <tbody>
+                      <tr>
+                        <td style={{ width: "28%", fontWeight: "bold" }}>
+                          छात्र का नाम / Student Name
+                        </td>
+                        <td colSpan={3} style={{ fontWeight: "bold" }}>
+                          <span id="rcNameEng">{nameEng}</span>
+                          {nameHin && nameHin !== nameEng ? (
+                            <>
+                              {" "}
+                              / <span id="rcNameHin">{nameHin}</span>
+                            </>
+                          ) : (
+                            <span id="rcNameHin" style={{ display: "none" }}>
+                              {nameHin}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: "bold" }}>पिता का नाम</td>
+                        <td style={{ fontWeight: 600 }}>
+                          <span id="rcFather" className="rc-dotted-field">
+                            {profile.fatherHin ||
+                              student?.fatherHin ||
+                              student?.father ||
+                              ""}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>माता का नाम</td>
+                        <td style={{ fontWeight: 600 }}>
+                          <span id="rcMother" className="rc-dotted-field">
+                            {profile.motherHin ||
+                              student?.motherHin ||
+                              student?.mother ||
+                              ""}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: "bold" }}>जन्म तिथि (अंकों में)</td>
+                        <td>
+                          <span id="rcDob" className="rc-dotted-field">
+                            {profile.dob || ""}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>
+                          जन्म तिथि (शब्दों में)
+                        </td>
+                        <td>
+                          <span className="rc-dotted-field">
+                            {profile.dobWords || ""}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: "bold" }}>समग्र आई.डी.</td>
+                        <td>
+                          <span id="rcSamagra" className="rc-dotted-field">
+                            {profile.samagraId || ""}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>आधार नं.</td>
+                        <td>
+                          <span className="rc-dotted-field">
+                            {profile.aadhaarId || ""}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: "bold" }}>स्कॉलर क्रमांक</td>
+                        <td>
+                          <span className="rc-dotted-field">
+                            {profile.scholarNo || ""}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>
+                          अनुक्रमांक (Roll No)
+                        </td>
+                        <td>
+                          <span className="rc-dotted-field">
+                            {student?.rollNo || ""}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: "bold" }}>विद्यालय का नाम</td>
+                        <td colSpan={3}>
+                          <span
+                            className="rc-dotted-field"
+                            style={{ minWidth: 200 }}
+                          >
+                            {profile.schoolName || ""}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: "bold" }}>विकासखंड</td>
+                        <td>
+                          <span className="rc-dotted-field">
+                            {profile.block || ""}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>जिला</td>
+                        <td>
+                          <span className="rc-dotted-field">
+                            {profile.district || ""}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ===== Marks Table ===== */}
                 <div
-                  style={{ fontSize: 16, fontWeight: "bold", letterSpacing: 1 }}
+                  style={{
+                    border: "1.5px solid #000",
+                    marginBottom: 10,
+                    overflow: "hidden",
+                  }}
                 >
-                  राज्य शिक्षा केन्द्र (म.प्र.)
+                  <div className="rc-section-heading">
+                    शैक्षिक उपलब्धि (Academic Achievement)
+                  </div>
+                  <table className="rc-table">
+                    <thead>
+                      <tr>
+                        <th
+                          rowSpan={2}
+                          style={{
+                            width: "22%",
+                            verticalAlign: "middle",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "6px 4px",
+                          }}
+                        >
+                          विषय
+                        </th>
+                        <th
+                          colSpan={6}
+                          style={{
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "6px 4px",
+                          }}
+                        >
+                          शैक्षिक मूल्यांकन (ग्रेड)
+                        </th>
+                      </tr>
+                      <tr>
+                        <th
+                          style={{
+                            width: "10%",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "5px 3px",
+                          }}
+                        >
+                          पूर्णांक
+                        </th>
+                        <th
+                          style={{
+                            width: "14%",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "5px 3px",
+                          }}
+                        >
+                          मासिक टेस्ट
+                          <br />
+                          (अधिभार 10 अंक)
+                        </th>
+                        <th
+                          style={{
+                            width: "15%",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "5px 3px",
+                          }}
+                        >
+                          अर्धवार्षिक परीक्षा
+                          <br />
+                          (अधिभार 20 अंक)
+                        </th>
+                        <th
+                          style={{
+                            width: "16%",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "5px 3px",
+                          }}
+                        >
+                          वार्षिक परीक्षा (लिखित)
+                          <br />
+                          (अ.अं. 60 अंक)
+                        </th>
+                        <th
+                          style={{
+                            width: "15%",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "5px 3px",
+                          }}
+                        >
+                          वार्षिक परीक्षा (प्रोजेक्ट)
+                          <br />
+                          (अधिभार 10 अंक)
+                        </th>
+                        <th
+                          style={{
+                            width: "8%",
+                            fontWeight: "bold",
+                            textAlign: "center",
+                            border: "1px solid #000",
+                            padding: "5px 3px",
+                          }}
+                        >
+                          समेकित ग्रेड
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subjectTotals.map((sub) => (
+                        <tr key={sub.key}>
+                          <td style={{ textAlign: "left" }}>
+                            {sub.hindi} ({sub.english})
+                          </td>
+                          <td>100</td>
+                          <td>{sub.monthly || ""}</td>
+                          <td>{sub.half || ""}</td>
+                          <td>{sub.annual || ""}</td>
+                          <td>{sub.project || ""}</td>
+                          <td style={{ fontWeight: "bold" }}>
+                            {getGrade(sub.total, 100)}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="rc-grand-total">
+                        <td style={{ fontWeight: "bold", textAlign: "center" }}>
+                          कुल / Grand Total
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>{maxTotal}</td>
+                        <td colSpan={4} />
+                        <td style={{ fontWeight: "bold" }}>{finalGrade}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: "bold", marginTop: 2 }}>
-                  समग्र प्रगति पत्रक
-                </div>
-                <div style={{ fontSize: 11, marginTop: 2 }}>
-                  कक्षा - {student?.class || "6"} : सत्र 2025-26
-                </div>
-              </div>
-              {/* Right Logo */}
-              <img
-                src={LOGO2_SRC}
-                alt="SCERT Logo"
-                width={80}
-                height={80}
-                style={{ objectFit: "contain", flexShrink: 0 }}
-              />
-            </div>
-          </div>
 
-          {/* Student Details */}
-          <div style={{ border: "1px solid #000", marginBottom: 8 }}>
-            <table
-              className="detail-table"
-              style={{ width: "100%", borderCollapse: "collapse" }}
-            >
-              <tbody>
-                <tr>
-                  <td style={{ width: "30%", fontWeight: "bold" }}>
-                    छात्र का नाम / Student Name
-                  </td>
-                  <td colSpan={3}>
-                    <span id="rcNameEng">{nameEng}</span>
-                    {nameHin && nameHin !== nameEng ? (
-                      <>
-                        {" "}
-                        / <span id="rcNameHin">{nameHin}</span>
-                      </>
-                    ) : (
-                      <span id="rcNameHin" style={{ display: "none" }}>
-                        {nameHin}
+                {/* ===== Co-Scholastic & Personal Skills ===== */}
+                <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  {/* Co-Scholastic */}
+                  <div style={{ flex: 1 }} className="co-section-box">
+                    <div className="rc-section-heading">
+                      सह-शैक्षिक क्षेत्र (Co-Scholastic Area)
+                    </div>
+                    <table className="rc-table" style={{ border: "none" }}>
+                      <thead>
+                        <tr>
+                          <th>गतिविधि</th>
+                          <th style={{ width: "35%" }}>ग्रेड</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            साहित्यिक (Literary)
+                          </td>
+                          <td>{csLiterary}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            सांस्कृतिक (Cultural)
+                          </td>
+                          <td>{csCultural}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            वैज्ञानिक (Scientific)
+                          </td>
+                          <td>{csScientific}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            सृजनात्मक (Creative)
+                          </td>
+                          <td>{csCreative}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>खेलकूद (Sports)</td>
+                          <td>{csSports}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Personal Skills */}
+                  <div style={{ flex: 1 }} className="co-section-box">
+                    <div className="rc-section-heading">
+                      व्यक्तिगत गुण (Personal Skills)
+                    </div>
+                    <table className="rc-table" style={{ border: "none" }}>
+                      <thead>
+                        <tr>
+                          <th>गुण</th>
+                          <th style={{ width: "35%" }}>ग्रेड</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            स्वच्छता (Cleanliness)
+                          </td>
+                          <td>{psCleanliness}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            अनुशासन (Discipline)
+                          </td>
+                          <td>{psDiscipline}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            ईमानदारी (Honesty)
+                          </td>
+                          <td>{psHonesty}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            समयनिष्ठा (Punctuality)
+                          </td>
+                          <td>{psPunctuality}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ textAlign: "left" }}>
+                            सहयोग (Cooperation)
+                          </td>
+                          <td>{psCooperation}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ===== Grade Summary ===== */}
+                <div className="grade-summary-section">
+                  <div className="rc-section-heading">
+                    शैक्षिक मूल्यांकन हेतु संचयी ग्रेड का विवरण
+                  </div>
+                  <div className="grade-summary-inner">
+                    <table
+                      style={{
+                        borderCollapse: "collapse",
+                        width: "100%",
+                        textAlign: "center",
+                      }}
+                    >
+                      <thead>
+                        <tr>
+                          <th
+                            style={{
+                              border: "1px solid #555",
+                              padding: "5px 6px",
+                              fontWeight: "bold",
+                              background: "#f0f0f0",
+                              color: "#000",
+                              fontSize: 13,
+                            }}
+                          >
+                            ग्रेड
+                          </th>
+                          {mpGradeList.map((g) => (
+                            <th
+                              key={g}
+                              style={{
+                                border: "1px solid #555",
+                                padding: "5px 6px",
+                                fontWeight: "bold",
+                                fontSize: 13,
+                                background:
+                                  mpGrade === g ? "#d0d0d0" : "#f0f0f0",
+                                color: "#000",
+                              }}
+                            >
+                              {g}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td
+                            style={{
+                              border: "1px solid #555",
+                              padding: "5px 6px",
+                              fontWeight: "bold",
+                              fontSize: 12,
+                              background: "#fafafa",
+                            }}
+                          >
+                            प्रतिशत
+                          </td>
+                          {mpGradeList.map((g) => (
+                            <td
+                              key={g}
+                              style={{
+                                border: "1px solid #555",
+                                padding: "5px 6px",
+                                fontSize: 11,
+                                background:
+                                  mpGrade === g ? "#d0d0d0" : "#fafafa",
+                                fontWeight: mpGrade === g ? "bold" : "normal",
+                              }}
+                            >
+                              {gradeRanges[g]}
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <p className="note-line">
+                      <strong>नोट -</strong> वार्षिक परीक्षा फल निर्धारण में सह-शैक्षिक
+                      क्षेत्र एवं व्यक्तिगत सामाजिक गुणों में अंकित ग्रेड को नहीं जोड़ा गया है।
+                    </p>
+
+                    <div
+                      style={{
+                        marginTop: 10,
+                        fontSize: 13,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 8,
+                        alignItems: "baseline",
+                      }}
+                    >
+                      <span>
+                        <strong>विद्यार्थी का परीक्षाफल एवं ग्रेड</strong> -{" "}
+                        <span
+                          style={{
+                            borderBottom: "1.5px solid #000",
+                            minWidth: 140,
+                            display: "inline-block",
+                            fontWeight: "bold",
+                            paddingBottom: 1,
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          {grandTotal > 0
+                            ? `${examResult} / ${mpGrade} (${percentage.toFixed(1)}%)`
+                            : ""}
+                        </span>
                       </span>
-                    )}
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: "bold" }}>पिता का नाम</td>
-                  <td>
-                    <span id="rcFather">
-                      {profile.fatherHin ||
-                        student?.fatherHin ||
-                        student?.father ||
-                        ""}
-                    </span>
-                  </td>
-                  <td style={{ fontWeight: "bold" }}>माता का नाम</td>
-                  <td>
-                    <span id="rcMother">
-                      {profile.motherHin ||
-                        student?.motherHin ||
-                        student?.mother ||
-                        ""}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: "bold" }}>जन्म तिथि (अंकों में)</td>
-                  <td>
-                    <span id="rcDob">{profile.dob || ""}</span>
-                  </td>
-                  <td style={{ fontWeight: "bold" }}>जन्म तिथि (शब्दों में)</td>
-                  <td>{profile.dobWords || ""}</td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: "bold" }}>समग्र आई.डी.</td>
-                  <td>
-                    <span id="rcSamagra">{profile.samagraId || ""}</span>
-                  </td>
-                  <td style={{ fontWeight: "bold" }}>आधार नं.</td>
-                  <td>{profile.aadhaarId || ""}</td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: "bold" }}>विद्वान क्रमांक</td>
-                  <td>{profile.scholarNo || ""}</td>
-                  <td style={{ fontWeight: "bold" }}>अनुक्रमांक (Roll No)</td>
-                  <td>{student?.rollNo || ""}</td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: "bold" }}>विद्यालय का नाम</td>
-                  <td colSpan={3}>{profile.schoolName || ""}</td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: "bold" }}>विकासखंड</td>
-                  <td>{profile.block || ""}</td>
-                  <td style={{ fontWeight: "bold" }}>जिला</td>
-                  <td>{profile.district || ""}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                      <span style={{ marginLeft: 16 }}>
+                        <strong>विद्यार्थी को कक्षा</strong>{" "}
+                        <input
+                          type="text"
+                          className="promotion-input"
+                          value={promotionClass}
+                          onChange={(e) => setPromotionClass(e.target.value)}
+                          placeholder="__"
+                        />{" "}
+                        <strong>में कक्षोन्नत किया जाता है।</strong>
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-          {/* Marks Table */}
-          <div style={{ marginBottom: 8 }}>
-            <div
-              style={{
-                fontWeight: "bold",
-                fontSize: 11,
-                marginBottom: 3,
-                textDecoration: "underline",
-              }}
-            >
-              शैक्षिक उपलब्धि (Academic Achievement)
-            </div>
-            <table className="rc-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "4%" }}>क्र.</th>
-                  <th style={{ width: "18%" }}>विषय (Subject)</th>
-                  <th style={{ width: "8%" }}>पूर्णांक (100)</th>
-                  <th style={{ width: "12%" }}>मासिक परीक्षा (10)</th>
-                  <th style={{ width: "12%" }}>अर्धवार्षिक (20)</th>
-                  <th style={{ width: "14%" }}>वार्षिक लिखित (60)</th>
-                  <th style={{ width: "12%" }}>प्रोजेक्ट (10)</th>
-                  <th style={{ width: "10%" }}>योग</th>
-                  <th style={{ width: "10%" }}>ग्रेड</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subjectTotals.map((sub, i) => (
-                  <tr key={sub.key}>
-                    <td style={{ textAlign: "center" }}>{i + 1}</td>
-                    <td>
-                      {sub.hindi} ({sub.english})
-                    </td>
-                    <td style={{ textAlign: "center" }}>100</td>
-                    <td style={{ textAlign: "center" }}>{sub.monthly || ""}</td>
-                    <td style={{ textAlign: "center" }}>{sub.half || ""}</td>
-                    <td style={{ textAlign: "center" }}>{sub.annual || ""}</td>
-                    <td style={{ textAlign: "center" }}>{sub.project || ""}</td>
-                    <td style={{ textAlign: "center", fontWeight: "bold" }}>
-                      {sub.total}
-                    </td>
-                    <td style={{ textAlign: "center", fontWeight: "bold" }}>
-                      {getGrade(sub.total, 100)}
-                    </td>
-                  </tr>
-                ))}
-                <tr style={{ background: "#e8e8e8" }}>
-                  <td
-                    colSpan={2}
-                    style={{ fontWeight: "bold", textAlign: "center" }}
-                  >
-                    कुल / Grand Total
-                  </td>
-                  <td style={{ textAlign: "center", fontWeight: "bold" }}>
-                    {maxTotal}
-                  </td>
-                  <td colSpan={4} />
-                  <td style={{ textAlign: "center", fontWeight: "bold" }}>
-                    {grandTotal}
-                  </td>
-                  <td style={{ textAlign: "center", fontWeight: "bold" }}>
-                    {finalGrade}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Co-Scholastic & Personal Skills */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 11,
-                  marginBottom: 3,
-                  textDecoration: "underline",
-                }}
-              >
-                सह-शैक्षिक क्षेत्र (Co-Scholastic Area)
-              </div>
-              <table className="rc-table">
-                <thead>
-                  <tr>
-                    <th>गतिविधि</th>
-                    <th>ग्रेड</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>साहित्यिक (Literary)</td>
-                    <td style={{ textAlign: "center" }}>{csLiterary}</td>
-                  </tr>
-                  <tr>
-                    <td>सांस्कृतिक (Cultural)</td>
-                    <td style={{ textAlign: "center" }}>{csCultural}</td>
-                  </tr>
-                  <tr>
-                    <td>वैज्ञानिक (Scientific)</td>
-                    <td style={{ textAlign: "center" }}>{csScientific}</td>
-                  </tr>
-                  <tr>
-                    <td>सृजनात्मक (Creative)</td>
-                    <td style={{ textAlign: "center" }}>{csCreative}</td>
-                  </tr>
-                  <tr>
-                    <td>खेलकूद (Sports)</td>
-                    <td style={{ textAlign: "center" }}>{csSports}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 11,
-                  marginBottom: 3,
-                  textDecoration: "underline",
-                }}
-              >
-                व्यक्तिगत गुण (Personal Skills)
-              </div>
-              <table className="rc-table">
-                <thead>
-                  <tr>
-                    <th>गुण</th>
-                    <th>ग्रेड</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>स्वच्छता (Cleanliness)</td>
-                    <td style={{ textAlign: "center" }}>{psCleanliness}</td>
-                  </tr>
-                  <tr>
-                    <td>अनुशासन (Discipline)</td>
-                    <td style={{ textAlign: "center" }}>{psDiscipline}</td>
-                  </tr>
-                  <tr>
-                    <td>ईमानदारी (Honesty)</td>
-                    <td style={{ textAlign: "center" }}>{psHonesty}</td>
-                  </tr>
-                  <tr>
-                    <td>समयनिष्ठा (Punctuality)</td>
-                    <td style={{ textAlign: "center" }}>{psPunctuality}</td>
-                  </tr>
-                  <tr>
-                    <td>सहयोग (Cooperation)</td>
-                    <td style={{ textAlign: "center" }}>{psCooperation}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* ===== शैक्षिक मूल्यांकन हेतु संचयी ग्रेड का विवरण ===== */}
-          <div className="grade-summary-section">
-            <h4>शैक्षिक मूल्यांकन हेतु संचयी ग्रेड का विवरण</h4>
-
-            {/* Grade Table */}
-            <table
-              style={{
-                borderCollapse: "collapse",
-                width: "100%",
-                textAlign: "center",
-                fontSize: 11,
-              }}
-            >
-              <thead>
-                <tr style={{ background: "#f5d7a1" }}>
-                  <th
-                    style={{
-                      border: "1px solid #000",
-                      padding: "3px 4px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    ग्रेड
-                  </th>
-                  {["A+", "A", "B+", "B", "C+", "C", "D", "E"].map((g) => (
-                    <th
-                      key={g}
-                      style={{
-                        border: "1px solid #000",
-                        padding: "3px 4px",
-                        fontWeight: "bold",
-                        background: mpGrade === g ? "#c6efce" : "#f5d7a1",
-                      }}
-                    >
-                      {g}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td
-                    style={{
-                      border: "1px solid #000",
-                      padding: "3px 4px",
-                      fontWeight: "bold",
-                      fontSize: 10,
-                    }}
-                  >
-                    प्रतिशत
-                  </td>
-                  {(
-                    [
-                      ["A+", "85 से अधिक"],
-                      ["A", "76–85"],
-                      ["B+", "66–75"],
-                      ["B", "56–65"],
-                      ["C+", "51–55"],
-                      ["C", "46–50"],
-                      ["D", "33–45"],
-                      ["E", "33 से कम"],
-                    ] as [string, string][]
-                  ).map(([grade, range]) => (
-                    <td
-                      key={grade}
-                      style={{
-                        border: "1px solid #000",
-                        padding: "3px 4px",
-                        fontSize: 10,
-                        background:
-                          mpGrade === grade ? "#c6efce" : "transparent",
-                      }}
-                    >
-                      {range}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Note */}
-            <p className="note-line">
-              <strong>नोट -</strong> वार्षिक परीक्षा फल निर्धारण में सह-शैक्षिक क्षेत्र एवं
-              व्यक्तिगत सामाजिक गुणों में अंकित ग्रेड को नहीं जोड़ा गया है।
-            </p>
-
-            {/* Result and Promotion lines */}
-            <div
-              style={{
-                marginTop: 10,
-                fontSize: 11,
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 8,
-                alignItems: "baseline",
-              }}
-            >
-              <span>
-                <strong>विद्यार्थी का परीक्षाफल एवं ग्रेड</strong> -{" "}
-                <span
+                {/* ===== Signatures ===== */}
+                <div
                   style={{
-                    borderBottom: "1px solid #000",
-                    minWidth: 140,
-                    display: "inline-block",
-                    fontWeight: "bold",
-                    paddingBottom: 1,
-                    letterSpacing: 0.5,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-end",
+                    marginTop: 20,
                   }}
                 >
-                  {grandTotal > 0
-                    ? `${examResult} / ${mpGrade} (${percentage.toFixed(1)}%)`
-                    : ""}
-                </span>
-              </span>
-              <span style={{ marginLeft: 16 }}>
-                <strong>विद्यार्थी को कक्षा</strong>{" "}
-                <input
-                  type="text"
-                  className="promotion-input"
-                  value={promotionClass}
-                  onChange={(e) => setPromotionClass(e.target.value)}
-                  placeholder="__"
-                  style={{
-                    width: 50,
-                    borderBottom: "1px solid #000",
-                    border: "none",
-                    borderBottomWidth: 1,
-                    borderBottomStyle: "solid",
-                    borderBottomColor: "#000",
-                    background: "transparent",
-                    fontSize: 11,
-                    textAlign: "center",
-                    outline: "none",
-                    fontFamily: "Arial, sans-serif",
-                  }}
-                />{" "}
-                <strong>में कक्षोन्नत किया जाता है।</strong>
-              </span>
-            </div>
-          </div>
-          {/* ===== END grade summary section ===== */}
-
-          {/* Footer / Signatures */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              marginTop: 16,
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <div className="sig-line" />
-              <div style={{ fontSize: 10, marginTop: 4 }}>
-                कक्षा अध्यापक के हस्ताक्षर
+                  <div style={{ textAlign: "center" }}>
+                    <div className="sig-line" />
+                    <div style={{ fontSize: 12, marginTop: 4 }}>
+                      कक्षा अध्यापक के हस्ताक्षर
+                    </div>
+                    <div style={{ fontSize: 11 }}>
+                      (Class Teacher Signature)
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "center", fontSize: 12 }}>
+                    <div>मुद्रण दिनांक: {today()}</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div className="sig-line" />
+                    <div style={{ fontSize: 12, marginTop: 4 }}>
+                      प्राचार्य के हस्ताक्षर
+                    </div>
+                    <div style={{ fontSize: 11 }}>(Principal Signature)</div>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: 9 }}>(Class Teacher Signature)</div>
+              {/* rc-content */}
             </div>
-            <div style={{ textAlign: "center", fontSize: 10 }}>
-              <div>मुद्रण दिनांक: {today()}</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div className="sig-line" style={{ marginLeft: "auto" }} />
-              <div style={{ fontSize: 10, marginTop: 4 }}>
-                प्राचार्य के हस्ताक्षर
-              </div>
-              <div style={{ fontSize: 9 }}>(Principal Signature)</div>
-            </div>
+            {/* rc-inner-border */}
           </div>
+          {/* rc-outer-border */}
         </div>
       )}
     </>

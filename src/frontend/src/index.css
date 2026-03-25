@@ -52,15 +52,15 @@
     --chart-4: 0.5 0.18 30;
     --chart-5: 0.6 0.1 200;
 
-    /* Sidebar: deep navy */
-    --sidebar: 0.22 0.07 258;
-    --sidebar-foreground: 0.92 0.01 240;
-    --sidebar-primary: 0.55 0.18 255;
-    --sidebar-primary-foreground: 1 0 0;
-    --sidebar-accent: 0.3 0.09 258;
-    --sidebar-accent-foreground: 0.95 0.01 240;
-    --sidebar-border: 0.28 0.06 258;
-    --sidebar-ring: 0.5 0.12 255;
+    /* Sidebar: clean white / light-grey scheme */
+    --sidebar: 1 0 0;
+    --sidebar-foreground: 0.2 0.01 250;
+    --sidebar-primary: 0.93 0.005 240;
+    --sidebar-primary-foreground: 0.2 0.01 250;
+    --sidebar-accent: 0.97 0.003 240;
+    --sidebar-accent-foreground: 0.2 0.01 250;
+    --sidebar-border: 0.88 0.01 240;
+    --sidebar-ring: 0.7 0.01 240;
   }
 
   * {
@@ -72,69 +72,67 @@
 }
 
 /* ============================================================
-   Print styles – hide chrome, show only student detail content
+   Print styles – hide chrome, show only report card content
    ============================================================ */
 @media print {
   @page {
-    size: A4;
-    margin: 18mm 15mm;
+    size: A4 portrait;
+    margin: 8mm 10mm;
   }
 
-  /* Hide everything that is not the student detail panel */
-  body > *,
-  #root > * {
-    visibility: hidden;
-  }
-
-  /* Show only the student detail panel and its children */
-  [data-ocid="student_detail.panel"],
-  [data-ocid="student_detail.panel"] * {
-    visibility: visible;
-  }
-
-  [data-ocid="student_detail.panel"] {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background: #fff;
-    padding: 0;
-  }
-
-  /* Force white backgrounds and black text for paper */
-  * {
-    background-color: transparent !important;
-    box-shadow: none !important;
-    color: #111 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* Keep colored badges readable */
-  .bg-emerald-50 {
-    background-color: #f0fdf4 !important;
-  }
-  .bg-red-50 {
-    background-color: #fef2f2 !important;
-  }
-  .bg-emerald-500 {
-    background-color: #22c55e !important;
-    color: #fff !important;
-  }
-  .bg-red-500 {
-    background-color: #ef4444 !important;
-    color: #fff !important;
-  }
-
-  /* Card borders visible on paper */
-  .rounded-lg,
-  [class*="card"] {
-    border: 1px solid #d1d5db !important;
-  }
-
-  /* Remove animations */
   * {
     animation: none !important;
     transition: none !important;
+  }
+
+  aside,
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  #root,
+  #root > div,
+  .flex-1.flex.flex-col.min-w-0 {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    width: 100% !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .report-card-container {
+    display: block !important;
+    visibility: visible !important;
+    width: 190mm !important;
+    max-width: 190mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    page-break-inside: avoid;
+  }
+
+  .report-card-container * {
+    visibility: visible !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
