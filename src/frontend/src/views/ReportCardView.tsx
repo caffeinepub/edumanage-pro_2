@@ -533,18 +533,27 @@ export function ReportCardView({ role: _role }: { role: string }) {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm 10mm;
+            margin: 8mm 10mm 4mm 10mm;
           }
 
           .no-print { display: none !important; }
 
-          body { margin: 0; background: #fff; }
+          body { margin: 0 !important; padding: 0 !important; background: #fff; }
 
           aside, header, nav, footer { display: none !important; }
 
+          /* Remove all extra spacing globally in print */
+          * {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+          }
+
+          /* Restore only what's needed */
           .report-card-container {
             width: 190mm !important;
             max-width: 190mm !important;
+            height: auto !important;
+            min-height: unset !important;
             margin: 0 auto !important;
             padding: 0 !important;
             box-shadow: none !important;
@@ -557,13 +566,15 @@ export function ReportCardView({ role: _role }: { role: string }) {
           .rc-outer-border {
             border: 3px double #000 !important;
             padding: 3px !important;
+            height: auto !important;
             print-color-adjust: exact !important;
             -webkit-print-color-adjust: exact !important;
           }
 
           .rc-inner-border {
             border: 1px solid #555 !important;
-            padding: 4mm 5mm !important;
+            padding: 4mm 5mm 2mm 5mm !important;
+            height: auto !important;
             print-color-adjust: exact !important;
             -webkit-print-color-adjust: exact !important;
           }
@@ -572,40 +583,54 @@ export function ReportCardView({ role: _role }: { role: string }) {
           .rc-section-heading {
             font-size: 11px !important;
             padding: 3px 6px !important;
+            margin: 0 !important;
           }
 
           /* Tighten table cells */
           .rc-table th,
           .rc-table td {
             font-size: 10px !important;
-            padding: 3px 3px !important;
-            line-height: 1.3 !important;
+            padding: 2px 3px !important;
+            line-height: 1.2 !important;
           }
 
           .detail-table td {
             font-size: 10px !important;
-            padding: 3px 5px !important;
-            line-height: 1.3 !important;
+            padding: 2px 5px !important;
+            line-height: 1.2 !important;
           }
 
-          /* Remove bottom margins on sections */
-          .report-card-container > div > div > div {
-            margin-bottom: 5px !important;
+          /* Remove margins on all divs, tables, paragraphs */
+          div, table, p, section, article {
+            margin: 0 !important;
+          }
+
+          table {
+            margin-bottom: 0 !important;
+          }
+
+          p {
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
           /* Grade summary section */
+          .grade-summary-section {
+            margin: 4px 0 0 0 !important;
+          }
+
           .grade-summary-section .grade-summary-inner {
-            padding: 4px 6px !important;
+            padding: 3px 6px 2px 6px !important;
           }
 
           .grade-summary-section .note-line {
             font-size: 9px !important;
-            margin-top: 3px !important;
+            margin-top: 2px !important;
           }
 
           .grade-summary-section .result-line {
             font-size: 10px !important;
-            margin-top: 4px !important;
+            margin-top: 2px !important;
           }
 
           /* Promotion input */
