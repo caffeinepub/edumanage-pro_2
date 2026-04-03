@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarCheck,
   ClipboardList,
+  ClipboardPen,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -22,6 +23,7 @@ export type NavItem =
   | "results"
   | "markEntry"
   | "reportCard"
+  | "admissionForm"
   | "profile";
 
 const allNavItems: { id: NavItem; label: string; icon: React.ElementType }[] = [
@@ -32,6 +34,7 @@ const allNavItems: { id: NavItem; label: string; icon: React.ElementType }[] = [
   { id: "results", label: "Results", icon: BarChart3 },
   { id: "markEntry", label: "Mark Entry", icon: ClipboardList },
   { id: "reportCard", label: "Report Card", icon: FileText },
+  { id: "admissionForm", label: "Admission Form", icon: ClipboardPen },
   { id: "profile", label: "My Profile", icon: UserCircle },
 ];
 
@@ -44,6 +47,7 @@ const roleItems: Record<Role, NavItem[]> = {
     "results",
     "markEntry",
     "reportCard",
+    "admissionForm",
   ],
   teacher: [
     "dashboard",
@@ -52,6 +56,7 @@ const roleItems: Record<Role, NavItem[]> = {
     "results",
     "markEntry",
     "reportCard",
+    "admissionForm",
   ],
   student: ["dashboard", "results", "profile"],
 };

@@ -5,6 +5,7 @@ import { Header } from "./components/Header";
 import { LoginPage } from "./components/LoginPage";
 import { type NavItem, Sidebar } from "./components/Sidebar";
 import { useAuth } from "./hooks/useAuth";
+import { AdmissionFormView } from "./views/AdmissionFormView";
 import { AttendanceView } from "./views/AttendanceView";
 import { DashboardView } from "./views/DashboardView";
 import { MarkEntryView } from "./views/MarkEntryView";
@@ -88,6 +89,7 @@ function App() {
               {activeItem === "results" && <ResultsView />}
               {activeItem === "markEntry" && <MarkEntryView role={role} />}
               {activeItem === "reportCard" && <ReportCardView role={role} />}
+              {activeItem === "admissionForm" && <AdmissionFormView />}
               {activeItem === "profile" && <ProfileView />}
             </motion.div>
           </AnimatePresence>

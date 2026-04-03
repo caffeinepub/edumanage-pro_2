@@ -13,6 +13,7 @@ const pageTitles: Record<NavItem, string> = {
   markEntry: "Mark Entry",
   profile: "My Profile",
   reportCard: "Samagra Pragati Patrak",
+  admissionForm: "Admission Form / प्रवेश पत्र",
 };
 
 const roleLabels: Record<Role, string> = {

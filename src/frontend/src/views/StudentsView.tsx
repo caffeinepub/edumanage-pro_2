@@ -206,6 +206,7 @@ export function StudentsView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [clearAllConfirm, setClearAllConfirm] = useState(false);
 
   // Form fields
   const [formName, setFormName] = useState("");
@@ -393,6 +394,23 @@ export function StudentsView({
       setDeletedIds(updated);
     }
     setDeleteTargetId(null);
+  }
+
+  function handleClearAll() {
+    // Delete all added students
+    localStorage.setItem(LS_KEY, JSON.stringify([]));
+    setAddedStudents([]);
+    // Mark all mock students as deleted
+    const allMockIds = mockStudents.map((s) => s.id);
+    const updatedDeleted = Array.from(new Set([...deletedIds, ...allMockIds]));
+    localStorage.setItem(LS_DELETED_KEY, JSON.stringify(updatedDeleted));
+    setDeletedIds(updatedDeleted);
+    // Clear overrides
+    localStorage.setItem(LS_OVERRIDES_KEY, JSON.stringify({}));
+    setStudentOverrides({});
+    // Clear synced students list
+    localStorage.setItem("students", JSON.stringify([]));
+    setClearAllConfirm(false);
   }
 
   const showActions = role === "admin" || role === "teacher";
@@ -659,6 +677,35 @@ export function StudentsView({
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Clear All Confirmation Dialog */}
+      <AlertDialog
+        open={clearAllConfirm}
+        onOpenChange={(open) => {
+          if (!open) setClearAllConfirm(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>सभी छात्र हटाएं?</AlertDialogTitle>
+            <AlertDialogDescription>
+              क्या आप सभी {baseList.length} छात्रों को हटाना चाहते हैं? यह क्रिया पूर्ववत
+              नहीं की जा सकती।
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setClearAllConfirm(false)}>
+              रद्द करें
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleClearAll}
+            >
+              सभी हटाएं
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative max-w-xs w-full">
@@ -671,16 +718,29 @@ export function StudentsView({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        {role === "admin" && (
-          <Button
-            data-ocid="students.add_button"
-            className="flex items-center gap-2"
-            onClick={openAddDialog}
-          >
-            <Plus className="w-4 h-4" />
-            Add Student
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {role === "admin" && baseList.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              className="flex items-center gap-2 border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={() => setClearAllConfirm(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              सभी छात्र हटाएं
+            </Button>
+          )}
+          {role === "admin" && (
+            <Button
+              data-ocid="students.add_button"
+              className="flex items-center gap-2"
+              onClick={openAddDialog}
+            >
+              <Plus className="w-4 h-4" />
+              Add Student
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Summary strip */}
