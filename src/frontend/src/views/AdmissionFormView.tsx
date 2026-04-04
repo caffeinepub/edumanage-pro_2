@@ -167,6 +167,22 @@ function loadForm(): FormData {
 export function AdmissionFormView() {
   const [form, setForm] = useState<FormData>(loadForm);
   const [saved, setSaved] = useState(false);
+  const [students, setStudents] = useState<
+    {
+      id: number;
+      name: string;
+      nameHin: string;
+      father: string;
+      fatherHin: string;
+      mother: string;
+      motherHin: string;
+      dob: string;
+      samagraId: string;
+      aadhaar: string;
+      scholarNo: string;
+    }[]
+  >([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
 
   const nameHinRef = useRef<HTMLInputElement | null>(null);
   const fatherHinRef = useRef<HTMLInputElement | null>(null);
@@ -209,6 +225,38 @@ export function AdmissionFormView() {
       ...prev,
       [hinField]: transliterateToHindi(prev[engField] as string),
       [manualField]: false,
+    }));
+  }
+
+  // Load students from localStorage on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("students");
+      if (raw) setStudents(JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function loadStudentData(id: string) {
+    if (!id) return;
+    const student = students.find((s) => String(s.id) === id);
+    if (!student) return;
+    setForm((prev) => ({
+      ...prev,
+      nameEng: student.name || "",
+      nameHin: student.nameHin || prev.nameHin,
+      nameHinManual: !!student.nameHin,
+      fatherEng: student.father || "",
+      fatherHin: student.fatherHin || "",
+      fatherHinManual: !!student.fatherHin,
+      motherEng: student.mother || "",
+      motherHin: student.motherHin || "",
+      motherHinManual: !!student.motherHin,
+      dob: student.dob || "",
+      samagraId: student.samagraId || "",
+      aadharNo: student.aadhaar || "",
+      scholarNo: student.scholarNo || "",
     }));
   }
 
@@ -440,9 +488,38 @@ export function AdmissionFormView() {
 
       {/* Controls - hidden on print */}
       <div className="no-print mb-4 flex flex-wrap gap-2 items-center">
-        <h2 className="text-lg font-semibold text-foreground mr-auto">
+        <h2 className="text-lg font-semibold text-foreground">
           प्रवेश फॉर्म (Admission Form)
         </h2>
+        <div className="flex items-center gap-2 mr-auto">
+          <label
+            htmlFor="af-student-select"
+            className="text-sm font-medium text-foreground whitespace-nowrap"
+          >
+            छात्र चुनें:
+          </label>
+          <select
+            id="af-student-select"
+            className="border border-gray-300 rounded px-2 py-1 text-sm bg-white min-w-[180px]"
+            value={selectedStudentId}
+            onChange={(e) => {
+              setSelectedStudentId(e.target.value);
+              loadStudentData(e.target.value);
+            }}
+          >
+            <option value="">-- छात्र चुनें --</option>
+            {students.length === 0 ? (
+              <option disabled>कोई छात्र नहीं मिला</option>
+            ) : (
+              students.map((s) => (
+                <option key={s.id} value={String(s.id)}>
+                  {s.name}
+                  {s.nameHin ? ` / ${s.nameHin}` : ""}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
         {saved && (
           <span className="text-sm text-green-600 font-medium">✓ सहेजा गया</span>
         )}
