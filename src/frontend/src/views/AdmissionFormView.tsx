@@ -167,21 +167,8 @@ function loadForm(): FormData {
 export function AdmissionFormView() {
   const [form, setForm] = useState<FormData>(loadForm);
   const [saved, setSaved] = useState(false);
-  const [students, setStudents] = useState<
-    {
-      id: number;
-      name: string;
-      nameHin: string;
-      father: string;
-      fatherHin: string;
-      mother: string;
-      motherHin: string;
-      dob: string;
-      samagraId: string;
-      aadhaar: string;
-      scholarNo: string;
-    }[]
-  >([]);
+  // Use Record<string, any> to accommodate all new student fields
+  const [students, setStudents] = useState<Record<string, any>[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
 
   const nameHinRef = useRef<HTMLInputElement | null>(null);
@@ -255,8 +242,47 @@ export function AdmissionFormView() {
       motherHinManual: !!student.motherHin,
       dob: student.dob || "",
       samagraId: student.samagraId || "",
-      aadharNo: student.aadhaar || "",
+      aadharNo: student.aadharNo || student.aadhaar || "",
       scholarNo: student.scholarNo || "",
+      // Guardian
+      guardianEng: student.guardianEng || "",
+      guardianHin: student.guardianHin || "",
+      guardianHinManual: !!student.guardianHin,
+      guardianRelation: student.guardianRelation || "",
+      // Personal
+      gender: student.gender || "",
+      bloodGroup: student.bloodGroup || "",
+      category: student.category || "",
+      religion: student.religion || "",
+      nationality: student.nationality || prev.nationality,
+      motherTongue: student.motherTongue || prev.motherTongue,
+      cwsn: student.cwsn || prev.cwsn,
+      // IDs
+      apaarId: student.apaarId || "",
+      bplNo: student.bplNo || "",
+      schoolCode: student.schoolCode || prev.schoolCode,
+      udiseCode: student.udiseCode || prev.udiseCode,
+      // Academic
+      admissionClass: student.admissionClass || student.class || "",
+      section: student.section || "",
+      rollNo: student.rollNo || "",
+      admissionDate: student.admissionDate || "",
+      previousSchool: student.previousSchool || "",
+      previousClass: student.previousClass || "",
+      tcNo: student.tcNo || "",
+      tcDate: student.tcDate || "",
+      // Address
+      address: student.address || "",
+      village: student.village || "",
+      post: student.post || "",
+      tehsil: student.tehsil || "",
+      district: student.district || "",
+      state: student.state || prev.state,
+      pincode: student.pincode || "",
+      // Contact
+      mobileNo: student.mobileNo || "",
+      alternateMobile: student.alternateMobile || "",
+      email: student.email || "",
     }));
   }
 
