@@ -236,6 +236,12 @@ export function ReportCardView({ role: _role }: { role: string }) {
     Record<string, PersonalSkills>
   >({});
   const [promotionClass, setPromotionClass] = useState<string>("");
+  const [schoolProfile, setSchoolProfile] = useState<{
+    schoolNameEng?: string;
+    schoolNameHin?: string;
+    block?: string;
+    district?: string;
+  }>({});
 
   useEffect(() => {
     if (selectedId) {
@@ -266,6 +272,13 @@ export function ReportCardView({ role: _role }: { role: string }) {
     setProfiles(p);
     setCoScholastic(cs);
     setPersonalSkills(ps);
+    const sp = JSON.parse(localStorage.getItem("schoolProfile") || "{}") as {
+      schoolNameEng?: string;
+      schoolNameHin?: string;
+      block?: string;
+      district?: string;
+    };
+    setSchoolProfile(sp);
 
     const savedId = localStorage.getItem("selectedStudent");
     if (savedId) {
@@ -299,9 +312,12 @@ export function ReportCardView({ role: _role }: { role: string }) {
     samagraId: storedProfile.samagraId || student?.samagraId,
     aadhaarId: storedProfile.aadhaarId || student?.aadharNo,
     scholarNo: storedProfile.scholarNo || student?.scholarNo,
-    schoolName: storedProfile.schoolName,
-    block: storedProfile.block,
-    district: storedProfile.district,
+    schoolName:
+      storedProfile.schoolName ||
+      schoolProfile.schoolNameEng ||
+      schoolProfile.schoolNameHin,
+    block: storedProfile.block || schoolProfile.block,
+    district: storedProfile.district || schoolProfile.district,
   };
 
   const studentMarks = markData[selectedId] || {};

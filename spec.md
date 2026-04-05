@@ -1,56 +1,33 @@
 # EduManage Pro
 
 ## Current State
-StudentsView का Add/Edit Student dialog में ये fields हैं:
-- Student Name (English + Hindi transliteration)
-- Father Name (English + Hindi)
-- Mother Name (English + Hindi)
-- समग्र आई.डी., आधार नं., स्कॉलर क्रमांक
-- जन्म तिथि (DOB)
-- Class, Section
-
-AdmissionFormView में ये अतिरिक्त fields हैं:
-- Guardian (संरक्षक) नाम English/Hindi + Relation
-- Gender (लिंग)
-- Blood Group (रक्त समूह)
-- Category (जाति वर्ग)
-- Religion (धर्म)
-- Nationality (राष्ट्रीयता)
-- CWSN
-- APAAR ID, BPL No.
-- School Code, UDISE Code
-- Admission Class, Admission Date, Roll No.
-- Previous School, Previous Class, TC No., TC Date
-- Address: address, village, post, tehsil, district, state, pincode
-- Contact: mobileNo, alternateMobile, email
+- App has Student Management, Mark Entry, Report Card, Admission Form modules
+- Report Card has schoolName, block, district fields stored in studentProfiles per student (not a global school profile)
+- Admission Form has schoolName, block, schoolDistrict, schoolCode, udiseCode fields filled manually
+- No dedicated School Profile page exists
+- Sidebar has: dashboard, students, teachers, attendance, results, markEntry, reportCard, admissionForm, profile
 
 ## Requested Changes (Diff)
 
 ### Add
-- StudentsView Add/Edit dialog में वो सभी fields जोड़ें जो Admission Form में हैं:
-  - Guardian नाम (English + Hindi + relation)
-  - Gender, Blood Group, Category, Religion, Nationality, CWSN
-  - APAAR ID, BPL No., School Code, UDISE Code
-  - Admission Date, Previous School, Previous Class, TC No., TC Date
-  - Address section: address, village, post, tehsil, district, state, pincode
-  - Contact: mobileNo, alternateMobile, email
-- Student interface में ये सभी fields add करें
-- handleSaveStudent में save करें
-- loadStudentData (AdmissionFormView) में ये नए fields भी load करें
+- **SchoolProfileView** (new page): Admin can fill and save school details globally
+  - Fields: schoolName (Hindi + English), principal name, school code, UDISE code, block/vikas khand, district, state, address, contact, email, affiliation board
+  - Data saved to localStorage key `"schoolProfile"`
+  - Save button with success feedback
+- **"School Profile"** nav item in sidebar (admin-only)
 
 ### Modify
-- StudentsView का Student interface extend करें
-- Add/Edit dialog को scrollable बनाएं (sections में organize)
-- openEditDialog में नए fields load करें
-- resetForm में नए fields reset करें
+- **Report Card**: On load, read `localStorage.getItem("schoolProfile")` and auto-fill schoolName, block, district fields
+- **Admission Form**: On load, read `localStorage.getItem("schoolProfile")` and auto-fill schoolName, block, schoolDistrict, schoolCode, udiseCode fields
+- **App.tsx**: Add schoolProfile nav item routing
+- **Sidebar**: Add schoolProfile nav item for admin role
 
 ### Remove
-कुछ नहीं हटाना है
+- Nothing removed
 
 ## Implementation Plan
-1. StudentsView.tsx का Student interface extend करें (सभी नए fields)
-2. State variables add करें (formGuardianEng, formGuardian​Hin, formGender, formBloodGroup, etc.)
-3. resetForm() और openEditDialog() update करें
-4. handleSaveStudent() में नए fields save करें
-5. Dialog form में sections बनाकर सभी नए fields add करें (accordion/tabbed या scrollable)
-6. AdmissionFormView.tsx में loadStudentData() update करें ताकि नए fields भी auto-fill हों
+1. Create `src/frontend/src/views/SchoolProfileView.tsx` with form for school details, save to `localStorage.schoolProfile`
+2. Update `Sidebar.tsx`: add `"schoolProfile"` NavItem type, add to admin roleItems, add icon+label
+3. Update `App.tsx`: import SchoolProfileView, add routing case
+4. Update `ReportCardView.tsx`: on mount, read `schoolProfile` from localStorage and use for schoolName/block/district with fallback to per-student stored values
+5. Update `AdmissionFormView.tsx`: on mount, read `schoolProfile` and auto-fill school section fields

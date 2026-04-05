@@ -225,6 +225,36 @@ export function AdmissionFormView() {
     }
   }, []);
 
+  // Load school profile and auto-fill school fields
+  useEffect(() => {
+    try {
+      const sp = JSON.parse(
+        localStorage.getItem("schoolProfile") || "{}",
+      ) as Record<string, string>;
+      if (
+        sp.schoolNameEng ||
+        sp.block ||
+        sp.schoolDistrict ||
+        sp.district ||
+        sp.schoolCode ||
+        sp.udiseCode
+      ) {
+        setForm((prev) => ({
+          ...prev,
+          ...(sp.schoolNameEng ? { schoolName: sp.schoolNameEng } : {}),
+          ...(sp.block ? { block: sp.block } : {}),
+          ...(sp.schoolDistrict || sp.district
+            ? { schoolDistrict: sp.schoolDistrict || sp.district }
+            : {}),
+          ...(sp.schoolCode ? { schoolCode: sp.schoolCode } : {}),
+          ...(sp.udiseCode ? { udiseCode: sp.udiseCode } : {}),
+        }));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   function loadStudentData(id: string) {
     if (!id) return;
     const student = students.find((s) => String(s.id) === id);

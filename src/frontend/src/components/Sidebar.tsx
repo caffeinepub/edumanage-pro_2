@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import {
   BarChart3,
   BookOpen,
+  Building2,
   CalendarCheck,
   ClipboardList,
   ClipboardPen,
@@ -24,6 +25,7 @@ export type NavItem =
   | "markEntry"
   | "reportCard"
   | "admissionForm"
+  | "schoolProfile"
   | "profile";
 
 const allNavItems: { id: NavItem; label: string; icon: React.ElementType }[] = [
@@ -35,6 +37,7 @@ const allNavItems: { id: NavItem; label: string; icon: React.ElementType }[] = [
   { id: "markEntry", label: "Mark Entry", icon: ClipboardList },
   { id: "reportCard", label: "Report Card", icon: FileText },
   { id: "admissionForm", label: "Admission Form", icon: ClipboardPen },
+  { id: "schoolProfile", label: "School Profile", icon: Building2 },
   { id: "profile", label: "My Profile", icon: UserCircle },
 ];
 
@@ -48,6 +51,7 @@ const roleItems: Record<Role, NavItem[]> = {
     "markEntry",
     "reportCard",
     "admissionForm",
+    "schoolProfile",
   ],
   teacher: [
     "dashboard",

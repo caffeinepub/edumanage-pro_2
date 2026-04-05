@@ -12,6 +12,7 @@ import { MarkEntryView } from "./views/MarkEntryView";
 import { ProfileView } from "./views/ProfileView";
 import { ReportCardView } from "./views/ReportCardView";
 import { ResultsView } from "./views/ResultsView";
+import { SchoolProfileView } from "./views/SchoolProfileView";
 import { StudentDetailView } from "./views/StudentDetailView";
 import { StudentsView } from "./views/StudentsView";
 import { TeachersView } from "./views/TeachersView";
@@ -90,6 +91,7 @@ function App() {
               {activeItem === "markEntry" && <MarkEntryView role={role} />}
               {activeItem === "reportCard" && <ReportCardView role={role} />}
               {activeItem === "admissionForm" && <AdmissionFormView />}
+              {activeItem === "schoolProfile" && <SchoolProfileView />}
               {activeItem === "profile" && <ProfileView />}
             </motion.div>
           </AnimatePresence>
