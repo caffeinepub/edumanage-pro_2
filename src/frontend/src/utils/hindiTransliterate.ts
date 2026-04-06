@@ -11,11 +11,12 @@
  *  - Consonant clusters: ONLY explicit digraphs (ksh, sh, pr, etc.) get virama
  *  - Single consonant followed by another single consonant → each gets inherent 'a'
  *    (e.g. Tulsiram → तुलसिराम, NOT तुल्सीरम)
+ *  - 'ng' → anusvara (ं) + ग  (e.g. khumsing → खुमसिंग, NOT खुमसीङ)
  */
 
 const _VIRAMA = "\u094D"; // ्
 
-type TokenType = "consonant" | "vowel" | "cluster";
+type TokenType = "consonant" | "vowel" | "cluster" | "nasal_g";
 
 interface Token {
   type: TokenType;
@@ -513,17 +514,21 @@ function tokenise(word: string): Token[] {
       i += 2;
       continue;
     } // भ
+
+    // ── 'ng' → anusvara (ं) + ग  e.g. khumsing → खुमसिंग ──────────────────
+    // 'ng' in Indian names represents a nasal sound written as anusvara + ग
+    // NOT ङ (which is a separate letter rarely used in modern Hindi names)
     if (r.startsWith("ng")) {
       tokens.push({
-        type: "consonant",
-        hi: "\u0919",
+        type: "nasal_g",
+        hi: "\u0902\u0917", // ं + ग
         matra: "",
         length: 2,
         isCluster: false,
       });
       i += 2;
       continue;
-    } // ङ
+    } // ंग
 
     // ── 2-char long vowels ────────────────────────────────────────────────────
     if (r.startsWith("aa")) {
@@ -884,7 +889,13 @@ function transliterateWord(word: string): string {
     const next = tokens[j + 1];
     const isLast = j === tokens.length - 1;
 
-    if (tok.type === "vowel") {
+    if (tok.type === "nasal_g") {
+      // 'ng' → anusvara (ं) attached to previous vowel/consonant + ग
+      // The anusvara must be appended directly after the preceding character
+      // (before any matra is placed), then ग follows.
+      // Since anusvara is a combining mark, we simply append ं then ग.
+      result += "\u0902\u0917"; // ं + ग
+    } else if (tok.type === "vowel") {
       const afterConsonant = endsWithDevanagariConsonant(result);
 
       if (tok.matra === "_a") {
