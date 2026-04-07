@@ -42,8 +42,10 @@ import {
   RotateCcw,
   Search,
   Trash2,
+  Upload,
+  X,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 const LS_KEY = "ems_added_students";
@@ -109,6 +111,13 @@ interface Student {
   mobileNo?: string;
   alternateMobile?: string;
   email?: string;
+  // NEW: Profile & Documents
+  profileId?: string;
+  dbtStatus?: "हाँ" | "नहीं";
+  studentPhoto?: string;
+  aadharPhoto?: string;
+  castePhoto?: string;
+  incomePhoto?: string;
 }
 
 function loadAddedStudents(): Student[] {
@@ -136,6 +145,11 @@ function loadStudentOverrides(): Record<number, Partial<Student>> {
   } catch {
     return {};
   }
+}
+
+function generateProfileId(count: number): string {
+  const year = new Date().getFullYear();
+  return `STU-${year}-${String(count + 1).padStart(4, "0")}`;
 }
 
 const gradeColors: Record<string, string> = {
@@ -243,6 +257,231 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+// Photo upload component
+interface PhotoUploadProps {
+  label: string;
+  value: string;
+  accept?: string;
+  sizeLimit?: { min: number; max: number };
+  hint?: string;
+  onChange: (base64: string) => void;
+  onError?: (msg: string) => void;
+  onClear: () => void;
+}
+
+function PhotoUpload({
+  label,
+  value,
+  accept = "image/jpeg,image/png",
+  sizeLimit,
+  hint,
+  onChange,
+  onError,
+  onClear,
+}: PhotoUploadProps) {
+  const [fileInfo, setFileInfo] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError("");
+
+    if (sizeLimit) {
+      if (file.size < sizeLimit.min) {
+        const msg = `फ़ाइल बहुत छोटी है (${(file.size / 1024).toFixed(1)} KB) — न्यूनतम ${(sizeLimit.min / 1024).toFixed(0)} KB होना चाहिए।`;
+        setError(msg);
+        onError?.(msg);
+        e.target.value = "";
+        return;
+      }
+      if (file.size > sizeLimit.max) {
+        const msg = `फ़ाइल बहुत बड़ी है (${(file.size / 1024).toFixed(1)} KB) — अधिकतम ${(sizeLimit.max / 1024).toFixed(0)} KB होना चाहिए।`;
+        setError(msg);
+        onError?.(msg);
+        e.target.value = "";
+        return;
+      }
+    }
+
+    setFileInfo(`${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      onChange(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">
+        {label}
+        {hint && (
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            ({hint})
+          </span>
+        )}
+      </Label>
+      <div className="flex items-start gap-3">
+        {value ? (
+          <div className="relative group">
+            <img
+              src={value}
+              alt={label}
+              className="w-16 h-16 object-cover rounded-md border border-border shadow-sm"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                onClear();
+                setFileInfo("");
+                setError("");
+                if (inputRef.current) inputRef.current.value = "";
+              }}
+              className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="w-16 h-16 rounded-md border-2 border-dashed border-border bg-secondary/30 flex items-center justify-center">
+            <Upload className="w-5 h-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 space-y-1">
+          <input
+            ref={inputRef}
+            type="file"
+            accept={accept}
+            onChange={handleFile}
+            className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-md file:border file:border-border file:bg-secondary file:text-xs file:font-medium file:cursor-pointer hover:file:bg-secondary/80 cursor-pointer"
+          />
+          {fileInfo && (
+            <p className="text-xs text-muted-foreground">{fileInfo}</p>
+          )}
+          {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Expanded detail card shown below a table row
+interface ExpandedStudentDetailProps {
+  student: Student;
+}
+
+function ExpandedStudentDetail({ student }: ExpandedStudentDetailProps) {
+  const InfoRow = ({ label, value }: { label: string; value?: string }) =>
+    value ? (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+          {label}
+        </span>
+        <span className="text-sm font-medium text-foreground">{value}</span>
+      </div>
+    ) : null;
+
+  const docs = [
+    { src: student.studentPhoto, label: "छात्र फोटो" },
+    { src: student.aadharPhoto, label: "आधार कार्ड" },
+    { src: student.castePhoto, label: "जाति प्रमाण पत्र" },
+    { src: student.incomePhoto, label: "आय प्रमाण पत्र" },
+  ].filter((d) => d.src);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.18 }}
+      className="bg-secondary/20 border-t border-border px-4 py-4"
+    >
+      {/* Profile ID & DBT Status row */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        {student.profileId && (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+            🪪 {student.profileId}
+          </span>
+        )}
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+            student.dbtStatus === "हाँ"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : "bg-red-50 text-red-600 border-red-200"
+          }`}
+        >
+          DBT: {student.dbtStatus ?? "नहीं"}
+        </span>
+      </div>
+
+      {/* Details grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-3">
+        <InfoRow label="रोल नं." value={student.rollNo} />
+        <InfoRow label="कक्षा" value={student.class} />
+        <InfoRow label="अनुभाग" value={student.section} />
+        <InfoRow label="स्कॉलर क्रमांक" value={student.scholarNo} />
+        <InfoRow
+          label="पिता का नाम (हिंदी)"
+          value={student.fatherHin ?? student.father}
+        />
+        <InfoRow
+          label="माता का नाम (हिंदी)"
+          value={student.motherHin ?? student.mother}
+        />
+        <InfoRow
+          label="जन्म तिथि"
+          value={student.dob ? dateToNumericFormat(student.dob) : undefined}
+        />
+        <InfoRow
+          label="जन्म तिथि (शब्दों में)"
+          value={student.dob ? dateToHindiWords(student.dob) : undefined}
+        />
+        <InfoRow label="समग्र आईडी" value={student.samagraId} />
+        <InfoRow label="आधार नं." value={student.aadharNo} />
+        <InfoRow label="लिंग" value={student.gender} />
+        <InfoRow label="रक्त समूह" value={student.bloodGroup} />
+        <InfoRow label="जाति" value={student.category} />
+        <InfoRow label="धर्म" value={student.religion} />
+        <InfoRow label="APAAR ID" value={student.apaarId} />
+        <InfoRow label="BPL नं." value={student.bplNo} />
+        <InfoRow label="पता" value={student.address} />
+        <InfoRow label="जिला" value={student.district} />
+        <InfoRow label="राज्य" value={student.state} />
+        <InfoRow label="पिनकोड" value={student.pincode} />
+        <InfoRow label="मोबाइल नं." value={student.mobileNo} />
+        <InfoRow label="ईमेल" value={student.email} />
+      </div>
+
+      {/* Documents row */}
+      {docs.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            📎 दस्तावेज़
+          </p>
+          <div className="flex flex-wrap gap-4">
+            {docs.map((doc) => (
+              <div key={doc.label} className="flex flex-col items-center gap-1">
+                <a href={doc.src} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={doc.src}
+                    alt={doc.label}
+                    className="w-20 h-20 object-cover rounded-md border border-border shadow-sm hover:opacity-80 transition-opacity"
+                  />
+                </a>
+                <span className="text-[10px] text-muted-foreground text-center">
+                  {doc.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export function StudentsView({
   onViewDetail,
   role,
@@ -258,6 +497,7 @@ export function StudentsView({
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
   const [clearAllConfirm, setClearAllConfirm] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // === EXISTING FORM FIELDS ===
   const [formName, setFormName] = useState("");
@@ -324,6 +564,13 @@ export function StudentsView({
   const [formMobileNo, setFormMobileNo] = useState("");
   const [formAlternateMobile, setFormAlternateMobile] = useState("");
   const [formEmail, setFormEmail] = useState("");
+
+  // === DOCUMENT & PROFILE FIELDS ===
+  const [formDbtStatus, setFormDbtStatus] = useState<"हाँ" | "नहीं">("नहीं");
+  const [formStudentPhoto, setFormStudentPhoto] = useState("");
+  const [formAadharPhoto, setFormAadharPhoto] = useState("");
+  const [formCastePhoto, setFormCastePhoto] = useState("");
+  const [formIncomePhoto, setFormIncomePhoto] = useState("");
 
   // Refs for focusing Hindi inputs
   const nameHindiRef = useRef<HTMLInputElement>(null);
@@ -412,6 +659,12 @@ export function StudentsView({
     setFormMobileNo("");
     setFormAlternateMobile("");
     setFormEmail("");
+    // Documents
+    setFormDbtStatus("नहीं");
+    setFormStudentPhoto("");
+    setFormAadharPhoto("");
+    setFormCastePhoto("");
+    setFormIncomePhoto("");
   }
 
   function openAddDialog() {
@@ -477,8 +730,17 @@ export function StudentsView({
     setFormMobileNo(student.mobileNo ?? "");
     setFormAlternateMobile(student.alternateMobile ?? "");
     setFormEmail(student.email ?? "");
+    // Documents
+    setFormDbtStatus(student.dbtStatus ?? "नहीं");
+    setFormStudentPhoto(student.studentPhoto ?? "");
+    setFormAadharPhoto(student.aadharPhoto ?? "");
+    setFormCastePhoto(student.castePhoto ?? "");
+    setFormIncomePhoto(student.incomePhoto ?? "");
     setDialogOpen(true);
   }
+
+  // Compute new profile ID for add
+  const newProfileId = generateProfileId(addedStudents.length);
 
   function handleSaveStudent(e: React.FormEvent) {
     e.preventDefault();
@@ -527,6 +789,12 @@ export function StudentsView({
       mobileNo: formMobileNo.trim(),
       alternateMobile: formAlternateMobile.trim(),
       email: formEmail.trim(),
+      // Documents
+      dbtStatus: formDbtStatus,
+      studentPhoto: formStudentPhoto,
+      aadharPhoto: formAadharPhoto,
+      castePhoto: formCastePhoto,
+      incomePhoto: formIncomePhoto,
     };
 
     if (editingStudent) {
@@ -572,6 +840,7 @@ export function StudentsView({
         rollNo: `${formClass.trim().replace(/\s+/g, "").toUpperCase()}-${suffix}`,
         attendance: 85,
         grade: "B",
+        profileId: newProfileId,
         ...extraFields,
       };
       const updated = [...addedStudents, newStudent];
@@ -599,18 +868,14 @@ export function StudentsView({
   }
 
   function handleClearAll() {
-    // Delete all added students
     localStorage.setItem(LS_KEY, JSON.stringify([]));
     setAddedStudents([]);
-    // Mark all mock students as deleted
     const allMockIds = mockStudents.map((s) => s.id);
     const updatedDeleted = Array.from(new Set([...deletedIds, ...allMockIds]));
     localStorage.setItem(LS_DELETED_KEY, JSON.stringify(updatedDeleted));
     setDeletedIds(updatedDeleted);
-    // Clear overrides
     localStorage.setItem(LS_OVERRIDES_KEY, JSON.stringify({}));
     setStudentOverrides({});
-    // Clear synced students list
     localStorage.setItem("students", JSON.stringify([]));
     setClearAllConfirm(false);
   }
@@ -639,6 +904,31 @@ export function StudentsView({
             className="flex flex-col flex-1 min-h-0"
           >
             <div className="flex-1 overflow-y-auto px-1 space-y-1 pr-2">
+              {/* Profile ID badge (only for new student) */}
+              {!editingStudent && (
+                <div className="flex items-center gap-3 bg-primary/5 border border-primary/15 rounded-lg px-3 py-2 mb-2">
+                  <span className="text-xs text-muted-foreground font-medium">
+                    प्रोफाइल आईडी (Profile ID):
+                  </span>
+                  <span className="font-mono text-sm font-bold text-primary tracking-wide">
+                    {newProfileId}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground ml-auto">
+                    स्वतः निर्मित
+                  </span>
+                </div>
+              )}
+              {editingStudent?.profileId && (
+                <div className="flex items-center gap-3 bg-primary/5 border border-primary/15 rounded-lg px-3 py-2 mb-2">
+                  <span className="text-xs text-muted-foreground font-medium">
+                    प्रोफाइल आईडी (Profile ID):
+                  </span>
+                  <span className="font-mono text-sm font-bold text-primary tracking-wide">
+                    {editingStudent.profileId}
+                  </span>
+                </div>
+              )}
+
               {/* ===== STUDENT NAME ===== */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -1232,7 +1522,7 @@ export function StudentsView({
                 </div>
               </div>
 
-              <div className="space-y-1.5 pb-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="email">ईमेल (Email)</Label>
                 <Input
                   id="email"
@@ -1243,6 +1533,82 @@ export function StudentsView({
                   onChange={(e) => setFormEmail(e.target.value)}
                 />
               </div>
+
+              {/* ===== SECTION 7: दस्तावेज़ (Documents) ===== */}
+              <SectionHeader title="📎 दस्तावेज़ (Documents)" />
+
+              {/* DBT Status */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
+                  DBT Status (डीबीटी स्थिति)
+                </Label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dbt-status"
+                      value="हाँ"
+                      checked={formDbtStatus === "हाँ"}
+                      onChange={() => setFormDbtStatus("हाँ")}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="text-sm font-medium text-emerald-700">
+                      हाँ (Yes)
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dbt-status"
+                      value="नहीं"
+                      checked={formDbtStatus === "नहीं"}
+                      onChange={() => setFormDbtStatus("नहीं")}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="text-sm font-medium text-red-600">
+                      नहीं (No)
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Student Photo */}
+              <PhotoUpload
+                label="छात्र फोटो (Student Photo)"
+                hint="10–50 KB, JPG/PNG"
+                value={formStudentPhoto}
+                accept="image/jpeg,image/png"
+                sizeLimit={{ min: 10240, max: 51200 }}
+                onChange={setFormStudentPhoto}
+                onClear={() => setFormStudentPhoto("")}
+              />
+
+              {/* Aadhaar Card Photo */}
+              <PhotoUpload
+                label="आधार कार्ड फोटो (Aadhaar Card Photo)"
+                value={formAadharPhoto}
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={setFormAadharPhoto}
+                onClear={() => setFormAadharPhoto("")}
+              />
+
+              {/* Jati Praman Patra */}
+              <PhotoUpload
+                label="जाति प्रमाण पत्र फोटो"
+                value={formCastePhoto}
+                accept="image/jpeg,image/png"
+                onChange={setFormCastePhoto}
+                onClear={() => setFormCastePhoto("")}
+              />
+
+              {/* Aay Praman Patra */}
+              <PhotoUpload
+                label="आय प्रमाण पत्र फोटो"
+                value={formIncomePhoto}
+                accept="image/jpeg,image/png"
+                onChange={setFormIncomePhoto}
+                onClear={() => setFormIncomePhoto("")}
+              />
             </div>
 
             <DialogFooter className="pt-3 border-t border-border">
@@ -1381,10 +1747,13 @@ export function StudentsView({
         <Table data-ocid="students.table">
           <TableHeader>
             <TableRow className="bg-secondary/60 hover:bg-secondary/60">
+              <TableHead className="w-8" />
               <TableHead className="font-semibold">Name</TableHead>
+              <TableHead className="font-semibold">Profile ID</TableHead>
               <TableHead className="font-semibold">Class</TableHead>
               <TableHead className="font-semibold">Section</TableHead>
               <TableHead className="font-semibold">Roll No.</TableHead>
+              <TableHead className="font-semibold">DBT</TableHead>
               <TableHead className="font-semibold">Attendance</TableHead>
               <TableHead className="font-semibold">Grade</TableHead>
               {showActions && (
@@ -1398,7 +1767,7 @@ export function StudentsView({
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={showActions ? 7 : 6}
+                  colSpan={showActions ? 10 : 9}
                   className="text-center py-10 text-muted-foreground"
                   data-ocid="students.empty_state"
                 >
@@ -1407,77 +1776,146 @@ export function StudentsView({
               </TableRow>
             ) : (
               filtered.map((student, idx) => (
-                <TableRow
-                  key={student.id}
-                  className="hover:bg-secondary/30 transition-colors"
-                  data-ocid={`students.item.${idx + 1}`}
-                >
-                  <TableCell>
-                    <button
-                      type="button"
-                      className="font-medium text-left hover:text-primary hover:underline transition-colors"
-                      onClick={() => onViewDetail(student.id)}
-                    >
-                      {student.name}
-                      {student.nameHin && (
-                        <span className="block text-xs text-muted-foreground font-normal">
-                          {student.nameHin}
+                <>
+                  <TableRow
+                    key={student.id}
+                    className="hover:bg-secondary/30 transition-colors cursor-pointer"
+                    data-ocid={`students.item.${idx + 1}`}
+                    onClick={() =>
+                      setExpandedId(
+                        expandedId === student.id ? null : student.id,
+                      )
+                    }
+                  >
+                    {/* Expand toggle */}
+                    <TableCell className="w-8 pr-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedId(
+                            expandedId === student.id ? null : student.id,
+                          );
+                        }}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={
+                          expandedId === student.id ? "Collapse" : "Expand"
+                        }
+                      >
+                        {expandedId === student.id ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        className="font-medium text-left hover:text-primary hover:underline transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewDetail(student.id);
+                        }}
+                      >
+                        {student.name}
+                        {student.nameHin && (
+                          <span className="block text-xs text-muted-foreground font-normal">
+                            {student.nameHin}
+                          </span>
+                        )}
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      {student.profileId ? (
+                        <span className="font-mono text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                          {student.profileId}
                         </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
-                    </button>
-                  </TableCell>
-                  <TableCell>{student.class}</TableCell>
-                  <TableCell>{student.section}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {student.rollNo}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`text-sm font-medium ${
-                        student.attendance >= 75
-                          ? "text-emerald-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {student.attendance}%
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`text-xs ${
-                        gradeColors[student.grade] ||
-                        "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {student.grade}
-                    </Badge>
-                  </TableCell>
-                  {showActions && (
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          data-ocid={`students.edit_button.${idx + 1}`}
-                          onClick={() => openEditDialog(student)}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        {role === "admin" && (
+                    </TableCell>
+                    <TableCell>{student.class}</TableCell>
+                    <TableCell>{student.section}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {student.rollNo}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`text-xs ${
+                          student.dbtStatus === "हाँ"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        {student.dbtStatus ?? "नहीं"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`text-sm font-medium ${
+                          student.attendance >= 75
+                            ? "text-emerald-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {student.attendance}%
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`text-xs ${
+                          gradeColors[student.grade] ||
+                          "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {student.grade}
+                      </Badge>
+                    </TableCell>
+                    {showActions && (
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            data-ocid={`students.delete_button.${idx + 1}`}
-                            onClick={() => setDeleteTargetId(student.id)}
+                            data-ocid={`students.edit_button.${idx + 1}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(student);
+                            }}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Pencil className="w-3.5 h-3.5" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
+                          {role === "admin" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              data-ocid={`students.delete_button.${idx + 1}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTargetId(student.id);
+                              }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+
+                  {/* Expanded detail row */}
+                  {expandedId === student.id && (
+                    <TableRow key={`${student.id}-expanded`}>
+                      <TableCell colSpan={showActions ? 10 : 9} className="p-0">
+                        <AnimatePresence>
+                          <ExpandedStudentDetail student={student} />
+                        </AnimatePresence>
+                      </TableCell>
+                    </TableRow>
                   )}
-                </TableRow>
+                </>
               ))
             )}
           </TableBody>
