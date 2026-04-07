@@ -8,6 +8,7 @@ import { useAuth } from "./hooks/useAuth";
 import { AdmissionFormView } from "./views/AdmissionFormView";
 import { AttendanceView } from "./views/AttendanceView";
 import { DashboardView } from "./views/DashboardView";
+import { DocumentUploadView } from "./views/DocumentUploadView";
 import { MarkEntryView } from "./views/MarkEntryView";
 import { ProfileView } from "./views/ProfileView";
 import { ReportCardView } from "./views/ReportCardView";
@@ -91,6 +92,7 @@ function App() {
               {activeItem === "markEntry" && <MarkEntryView role={role} />}
               {activeItem === "reportCard" && <ReportCardView role={role} />}
               {activeItem === "admissionForm" && <AdmissionFormView />}
+              {activeItem === "documentUpload" && <DocumentUploadView />}
               {activeItem === "schoolProfile" && <SchoolProfileView />}
               {activeItem === "profile" && <ProfileView />}
             </motion.div>

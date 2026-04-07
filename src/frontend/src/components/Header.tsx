@@ -15,6 +15,7 @@ const pageTitles: Record<NavItem, string> = {
   reportCard: "Samagra Pragati Patrak",
   admissionForm: "Admission Form / प्रवेश पत्र",
   schoolProfile: "School Profile / विद्यालय प्रोफाइल",
+  documentUpload: "Document Upload / दस्तावेज़ अपलोड",
 };
 
 const roleLabels: Record<Role, string> = {
