@@ -405,15 +405,6 @@ function ExpandedStudentDetail({ student }: ExpandedStudentDetailProps) {
             🪪 {student.profileId}
           </span>
         )}
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-            student.dbtStatus === "हाँ"
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : "bg-red-50 text-red-600 border-red-200"
-          }`}
-        >
-          DBT: {student.dbtStatus ?? "नहीं"}
-        </span>
       </div>
 
       {/* Details grid */}
@@ -566,7 +557,6 @@ export function StudentsView({
   const [formEmail, setFormEmail] = useState("");
 
   // === DOCUMENT & PROFILE FIELDS ===
-  const [formDbtStatus, setFormDbtStatus] = useState<"हाँ" | "नहीं">("नहीं");
   const [formStudentPhoto, setFormStudentPhoto] = useState("");
   const [formAadharPhoto, setFormAadharPhoto] = useState("");
   const [formCastePhoto, setFormCastePhoto] = useState("");
@@ -660,7 +650,6 @@ export function StudentsView({
     setFormAlternateMobile("");
     setFormEmail("");
     // Documents
-    setFormDbtStatus("नहीं");
     setFormStudentPhoto("");
     setFormAadharPhoto("");
     setFormCastePhoto("");
@@ -731,7 +720,6 @@ export function StudentsView({
     setFormAlternateMobile(student.alternateMobile ?? "");
     setFormEmail(student.email ?? "");
     // Documents
-    setFormDbtStatus(student.dbtStatus ?? "नहीं");
     setFormStudentPhoto(student.studentPhoto ?? "");
     setFormAadharPhoto(student.aadharPhoto ?? "");
     setFormCastePhoto(student.castePhoto ?? "");
@@ -790,7 +778,6 @@ export function StudentsView({
       alternateMobile: formAlternateMobile.trim(),
       email: formEmail.trim(),
       // Documents
-      dbtStatus: formDbtStatus,
       studentPhoto: formStudentPhoto,
       aadharPhoto: formAadharPhoto,
       castePhoto: formCastePhoto,
@@ -1537,41 +1524,6 @@ export function StudentsView({
               {/* ===== SECTION 7: दस्तावेज़ (Documents) ===== */}
               <SectionHeader title="📎 दस्तावेज़ (Documents)" />
 
-              {/* DBT Status */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  DBT Status (डीबीटी स्थिति)
-                </Label>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="dbt-status"
-                      value="हाँ"
-                      checked={formDbtStatus === "हाँ"}
-                      onChange={() => setFormDbtStatus("हाँ")}
-                      className="w-4 h-4 accent-primary"
-                    />
-                    <span className="text-sm font-medium text-emerald-700">
-                      हाँ (Yes)
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="dbt-status"
-                      value="नहीं"
-                      checked={formDbtStatus === "नहीं"}
-                      onChange={() => setFormDbtStatus("नहीं")}
-                      className="w-4 h-4 accent-primary"
-                    />
-                    <span className="text-sm font-medium text-red-600">
-                      नहीं (No)
-                    </span>
-                  </label>
-                </div>
-              </div>
-
               {/* Student Photo */}
               <PhotoUpload
                 label="छात्र फोटो (Student Photo)"
@@ -1753,7 +1705,6 @@ export function StudentsView({
               <TableHead className="font-semibold">Class</TableHead>
               <TableHead className="font-semibold">Section</TableHead>
               <TableHead className="font-semibold">Roll No.</TableHead>
-              <TableHead className="font-semibold">DBT</TableHead>
               <TableHead className="font-semibold">Attendance</TableHead>
               <TableHead className="font-semibold">Grade</TableHead>
               {showActions && (
@@ -1767,7 +1718,7 @@ export function StudentsView({
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={showActions ? 10 : 9}
+                  colSpan={showActions ? 9 : 8}
                   className="text-center py-10 text-muted-foreground"
                   data-ocid="students.empty_state"
                 >
@@ -1841,17 +1792,6 @@ export function StudentsView({
                       {student.rollNo}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        className={`text-xs ${
-                          student.dbtStatus === "हाँ"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-red-100 text-red-600"
-                        }`}
-                      >
-                        {student.dbtStatus ?? "नहीं"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
                       <span
                         className={`text-sm font-medium ${
                           student.attendance >= 75
@@ -1908,7 +1848,7 @@ export function StudentsView({
                   {/* Expanded detail row */}
                   {expandedId === student.id && (
                     <TableRow key={`${student.id}-expanded`}>
-                      <TableCell colSpan={showActions ? 10 : 9} className="p-0">
+                      <TableCell colSpan={showActions ? 9 : 8} className="p-0">
                         <AnimatePresence>
                           <ExpandedStudentDetail student={student} />
                         </AnimatePresence>

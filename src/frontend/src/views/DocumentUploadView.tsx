@@ -160,7 +160,6 @@ export function DocumentUploadView() {
   const [aadharPhoto, setAadharPhoto] = useState("");
   const [castePhoto, setCastePhoto] = useState("");
   const [incomePhoto, setIncomePhoto] = useState("");
-  const [dbtStatus, setDbtStatus] = useState<"हाँ" | "नहीं">("नहीं");
 
   useEffect(() => {
     const raw = localStorage.getItem("students");
@@ -183,13 +182,11 @@ export function DocumentUploadView() {
       setAadharPhoto(s.aadharPhoto ?? "");
       setCastePhoto(s.castePhoto ?? "");
       setIncomePhoto(s.incomePhoto ?? "");
-      setDbtStatus(s.dbtStatus ?? "नहीं");
     } else {
       setStudentPhoto("");
       setAadharPhoto("");
       setCastePhoto("");
       setIncomePhoto("");
-      setDbtStatus("नहीं");
     }
   }
 
@@ -203,7 +200,6 @@ export function DocumentUploadView() {
             aadharPhoto,
             castePhoto,
             incomePhoto,
-            dbtStatus,
           }
         : s,
     );
@@ -330,41 +326,6 @@ export function DocumentUploadView() {
 
       {student ? (
         <>
-          {/* ─── DBT Status ────────────────────────────────────────── */}
-          <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <span className="text-base">💰</span> DBT Status (डीबीटी स्थिति)
-            </h2>
-            <div className="flex items-center gap-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="doc-dbt-status"
-                  value="हाँ"
-                  checked={dbtStatus === "हाँ"}
-                  onChange={() => setDbtStatus("हाँ")}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span className="text-sm font-medium text-emerald-700">
-                  हाँ (Yes)
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="doc-dbt-status"
-                  value="नहीं"
-                  checked={dbtStatus === "नहीं"}
-                  onChange={() => setDbtStatus("नहीं")}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span className="text-sm font-medium text-red-600">
-                  नहीं (No)
-                </span>
-              </label>
-            </div>
-          </div>
-
           {/* ─── Documents Grid ─────────────────────────────────────── */}
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
