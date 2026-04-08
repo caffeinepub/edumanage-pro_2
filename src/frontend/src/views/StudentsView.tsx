@@ -42,8 +42,6 @@ import {
   RotateCcw,
   Search,
   Trash2,
-  Upload,
-  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -257,116 +255,6 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-// Photo upload component
-interface PhotoUploadProps {
-  label: string;
-  value: string;
-  accept?: string;
-  sizeLimit?: { min: number; max: number };
-  hint?: string;
-  onChange: (base64: string) => void;
-  onError?: (msg: string) => void;
-  onClear: () => void;
-}
-
-function PhotoUpload({
-  label,
-  value,
-  accept = "image/jpeg,image/png",
-  sizeLimit,
-  hint,
-  onChange,
-  onError,
-  onClear,
-}: PhotoUploadProps) {
-  const [fileInfo, setFileInfo] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setError("");
-
-    if (sizeLimit) {
-      if (file.size < sizeLimit.min) {
-        const msg = `फ़ाइल बहुत छोटी है (${(file.size / 1024).toFixed(1)} KB) — न्यूनतम ${(sizeLimit.min / 1024).toFixed(0)} KB होना चाहिए।`;
-        setError(msg);
-        onError?.(msg);
-        e.target.value = "";
-        return;
-      }
-      if (file.size > sizeLimit.max) {
-        const msg = `फ़ाइल बहुत बड़ी है (${(file.size / 1024).toFixed(1)} KB) — अधिकतम ${(sizeLimit.max / 1024).toFixed(0)} KB होना चाहिए।`;
-        setError(msg);
-        onError?.(msg);
-        e.target.value = "";
-        return;
-      }
-    }
-
-    setFileInfo(`${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      onChange(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  return (
-    <div className="space-y-2">
-      <Label className="text-sm font-medium">
-        {label}
-        {hint && (
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            ({hint})
-          </span>
-        )}
-      </Label>
-      <div className="flex items-start gap-3">
-        {value ? (
-          <div className="relative group">
-            <img
-              src={value}
-              alt={label}
-              className="w-16 h-16 object-cover rounded-md border border-border shadow-sm"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                onClear();
-                setFileInfo("");
-                setError("");
-                if (inputRef.current) inputRef.current.value = "";
-              }}
-              className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X className="w-2.5 h-2.5" />
-            </button>
-          </div>
-        ) : (
-          <div className="w-16 h-16 rounded-md border-2 border-dashed border-border bg-secondary/30 flex items-center justify-center">
-            <Upload className="w-5 h-5 text-muted-foreground" />
-          </div>
-        )}
-        <div className="flex-1 space-y-1">
-          <input
-            ref={inputRef}
-            type="file"
-            accept={accept}
-            onChange={handleFile}
-            className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-md file:border file:border-border file:bg-secondary file:text-xs file:font-medium file:cursor-pointer hover:file:bg-secondary/80 cursor-pointer"
-          />
-          {fileInfo && (
-            <p className="text-xs text-muted-foreground">{fileInfo}</p>
-          )}
-          {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Expanded detail card shown below a table row
 interface ExpandedStudentDetailProps {
   student: Student;
@@ -557,10 +445,7 @@ export function StudentsView({
   const [formEmail, setFormEmail] = useState("");
 
   // === DOCUMENT & PROFILE FIELDS ===
-  const [formStudentPhoto, setFormStudentPhoto] = useState("");
-  const [formAadharPhoto, setFormAadharPhoto] = useState("");
-  const [formCastePhoto, setFormCastePhoto] = useState("");
-  const [formIncomePhoto, setFormIncomePhoto] = useState("");
+  const [formDbtStatus, setFormDbtStatus] = useState<"हाँ" | "नहीं">("नहीं");
 
   // Refs for focusing Hindi inputs
   const nameHindiRef = useRef<HTMLInputElement>(null);
@@ -649,11 +534,8 @@ export function StudentsView({
     setFormMobileNo("");
     setFormAlternateMobile("");
     setFormEmail("");
-    // Documents
-    setFormStudentPhoto("");
-    setFormAadharPhoto("");
-    setFormCastePhoto("");
-    setFormIncomePhoto("");
+    // DBT
+    setFormDbtStatus("नहीं");
   }
 
   function openAddDialog() {
@@ -719,11 +601,8 @@ export function StudentsView({
     setFormMobileNo(student.mobileNo ?? "");
     setFormAlternateMobile(student.alternateMobile ?? "");
     setFormEmail(student.email ?? "");
-    // Documents
-    setFormStudentPhoto(student.studentPhoto ?? "");
-    setFormAadharPhoto(student.aadharPhoto ?? "");
-    setFormCastePhoto(student.castePhoto ?? "");
-    setFormIncomePhoto(student.incomePhoto ?? "");
+    // DBT
+    setFormDbtStatus(student.dbtStatus ?? "नहीं");
     setDialogOpen(true);
   }
 
@@ -777,11 +656,8 @@ export function StudentsView({
       mobileNo: formMobileNo.trim(),
       alternateMobile: formAlternateMobile.trim(),
       email: formEmail.trim(),
-      // Documents
-      studentPhoto: formStudentPhoto,
-      aadharPhoto: formAadharPhoto,
-      castePhoto: formCastePhoto,
-      incomePhoto: formIncomePhoto,
+      // DBT
+      dbtStatus: formDbtStatus,
     };
 
     if (editingStudent) {
@@ -1521,46 +1397,47 @@ export function StudentsView({
                 />
               </div>
 
-              {/* ===== SECTION 7: दस्तावेज़ (Documents) ===== */}
-              <SectionHeader title="📎 दस्तावेज़ (Documents)" />
+              {/* ===== SECTION 7: DBT विवरण ===== */}
+              <SectionHeader title="💰 DBT विवरण (Direct Benefit Transfer)" />
 
-              {/* Student Photo */}
-              <PhotoUpload
-                label="छात्र फोटो (Student Photo)"
-                hint="10–50 KB, JPG/PNG"
-                value={formStudentPhoto}
-                accept="image/jpeg,image/png"
-                sizeLimit={{ min: 10240, max: 51200 }}
-                onChange={setFormStudentPhoto}
-                onClear={() => setFormStudentPhoto("")}
-              />
-
-              {/* Aadhaar Card Photo */}
-              <PhotoUpload
-                label="आधार कार्ड फोटो (Aadhaar Card Photo)"
-                value={formAadharPhoto}
-                accept="image/jpeg,image/png,application/pdf"
-                onChange={setFormAadharPhoto}
-                onClear={() => setFormAadharPhoto("")}
-              />
-
-              {/* Jati Praman Patra */}
-              <PhotoUpload
-                label="जाति प्रमाण पत्र फोटो"
-                value={formCastePhoto}
-                accept="image/jpeg,image/png"
-                onChange={setFormCastePhoto}
-                onClear={() => setFormCastePhoto("")}
-              />
-
-              {/* Aay Praman Patra */}
-              <PhotoUpload
-                label="आय प्रमाण पत्र फोटो"
-                value={formIncomePhoto}
-                accept="image/jpeg,image/png"
-                onChange={setFormIncomePhoto}
-                onClear={() => setFormIncomePhoto("")}
-              />
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">
+                  DBT Status (Direct Benefit Transfer)
+                </Label>
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dbtStatus"
+                      value="हाँ"
+                      checked={formDbtStatus === "हाँ"}
+                      onChange={() => setFormDbtStatus("हाँ")}
+                      className="w-4 h-4 accent-primary"
+                      data-ocid="students.dbt_yes"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      हाँ (Yes)
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dbtStatus"
+                      value="नहीं"
+                      checked={formDbtStatus === "नहीं"}
+                      onChange={() => setFormDbtStatus("नहीं")}
+                      className="w-4 h-4 accent-primary"
+                      data-ocid="students.dbt_no"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      नहीं (No)
+                    </span>
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  क्या छात्र को DBT (Direct Benefit Transfer) का लाभ मिलता है?
+                </p>
+              </div>
             </div>
 
             <DialogFooter className="pt-3 border-t border-border">
