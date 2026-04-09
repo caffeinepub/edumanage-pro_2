@@ -611,6 +611,21 @@ export function StudentsView({
 
   function handleSaveStudent(e: React.FormEvent) {
     e.preventDefault();
+
+    // Digit-length validation (fields are optional but if filled must match)
+    if (formSamagraId.trim() && formSamagraId.trim().length !== 9) {
+      alert("समग्र आई.डी. ठीक 9 अंकों की होनी चाहिए।");
+      return;
+    }
+    if (formAadharNo.trim() && formAadharNo.trim().length !== 12) {
+      alert("आधार नं. ठीक 12 अंकों का होना चाहिए।");
+      return;
+    }
+    if (formMobileNo.trim() && formMobileNo.trim().length !== 10) {
+      alert("मोबाइल नं. ठीक 10 अंकों का होना चाहिए।");
+      return;
+    }
+
     const extraFields = {
       father: formFatherName.trim(),
       fatherHin: formFatherNameHindi.trim(),
@@ -1098,20 +1113,38 @@ export function StudentsView({
                   <Input
                     id="samagra-id"
                     data-ocid="students.input"
-                    placeholder="9-digit Samagra ID"
+                    placeholder="समग्र आई.डी. (9 अंक)"
+                    maxLength={9}
+                    inputMode="numeric"
                     value={formSamagraId}
-                    onChange={(e) => setFormSamagraId(e.target.value)}
+                    onChange={(e) =>
+                      setFormSamagraId(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                   />
+                  {formSamagraId.length > 0 && formSamagraId.length !== 9 && (
+                    <p className="text-xs text-destructive">
+                      {formSamagraId.length}/9 अंक — ठीक 9 अंक आवश्यक हैं
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="aadhar-no">आधार नं. (Aadhar No.)</Label>
                   <Input
                     id="aadhar-no"
                     data-ocid="students.input"
-                    placeholder="12-digit Aadhar number"
+                    placeholder="आधार नं. (12 अंक)"
+                    maxLength={12}
+                    inputMode="numeric"
                     value={formAadharNo}
-                    onChange={(e) => setFormAadharNo(e.target.value)}
+                    onChange={(e) =>
+                      setFormAadharNo(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                   />
+                  {formAadharNo.length > 0 && formAadharNo.length !== 12 && (
+                    <p className="text-xs text-destructive">
+                      {formAadharNo.length}/12 अंक — ठीक 12 अंक आवश्यक हैं
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1122,8 +1155,11 @@ export function StudentsView({
                     id="scholar-no"
                     data-ocid="students.input"
                     placeholder="Scholar number"
+                    inputMode="numeric"
                     value={formScholarNo}
-                    onChange={(e) => setFormScholarNo(e.target.value)}
+                    onChange={(e) =>
+                      setFormScholarNo(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -1131,10 +1167,19 @@ export function StudentsView({
                   <Input
                     id="apaar-id"
                     data-ocid="students.input"
-                    placeholder="APAAR ID"
+                    placeholder="APAAR आई.डी. (12 अंक)"
+                    maxLength={12}
+                    inputMode="numeric"
                     value={formApaarId}
-                    onChange={(e) => setFormApaarId(e.target.value)}
+                    onChange={(e) =>
+                      setFormApaarId(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                   />
+                  {formApaarId.length > 0 && formApaarId.length !== 12 && (
+                    <p className="text-xs text-destructive">
+                      {formApaarId.length}/12 अंक — ठीक 12 अंक आवश्यक हैं
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1145,8 +1190,11 @@ export function StudentsView({
                     id="bpl-no"
                     data-ocid="students.input"
                     placeholder="BPL Number"
+                    inputMode="numeric"
                     value={formBplNo}
-                    onChange={(e) => setFormBplNo(e.target.value)}
+                    onChange={(e) =>
+                      setFormBplNo(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -1350,10 +1398,19 @@ export function StudentsView({
                   <Input
                     id="pincode"
                     data-ocid="students.input"
-                    placeholder="6-digit Pincode"
+                    placeholder="पिनकोड (6 अंक)"
+                    maxLength={6}
+                    inputMode="numeric"
                     value={formPincode}
-                    onChange={(e) => setFormPincode(e.target.value)}
+                    onChange={(e) =>
+                      setFormPincode(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                   />
+                  {formPincode.length > 0 && formPincode.length !== 6 && (
+                    <p className="text-xs text-destructive">
+                      {formPincode.length}/6 अंक — ठीक 6 अंक आवश्यक हैं
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1366,10 +1423,19 @@ export function StudentsView({
                   <Input
                     id="mobile-no"
                     data-ocid="students.input"
-                    placeholder="10-digit mobile number"
+                    placeholder="मोबाइल नं. (10 अंक)"
+                    maxLength={10}
+                    inputMode="numeric"
                     value={formMobileNo}
-                    onChange={(e) => setFormMobileNo(e.target.value)}
+                    onChange={(e) =>
+                      setFormMobileNo(e.target.value.replace(/[^0-9]/g, ""))
+                    }
                   />
+                  {formMobileNo.length > 0 && formMobileNo.length !== 10 && (
+                    <p className="text-xs text-destructive">
+                      {formMobileNo.length}/10 अंक — ठीक 10 अंक आवश्यक हैं
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="alt-mobile">
@@ -1378,10 +1444,22 @@ export function StudentsView({
                   <Input
                     id="alt-mobile"
                     data-ocid="students.input"
-                    placeholder="Alternate mobile"
+                    placeholder="वैकल्पिक मोबाइल (10 अंक)"
+                    maxLength={10}
+                    inputMode="numeric"
                     value={formAlternateMobile}
-                    onChange={(e) => setFormAlternateMobile(e.target.value)}
+                    onChange={(e) =>
+                      setFormAlternateMobile(
+                        e.target.value.replace(/[^0-9]/g, ""),
+                      )
+                    }
                   />
+                  {formAlternateMobile.length > 0 &&
+                    formAlternateMobile.length !== 10 && (
+                      <p className="text-xs text-destructive">
+                        {formAlternateMobile.length}/10 अंक — ठीक 10 अंक आवश्यक हैं
+                      </p>
+                    )}
                 </div>
               </div>
 

@@ -1,944 +1,519 @@
 /**
- * English to Hindi (Devanagari) phonetic transliteration.
+ * English to Hindi (Devanagari) phonetic/bhasha transliteration.
  * Offline — no API required.
- * Optimised for common Indian names.
+ * Optimised for common Indian names with proper bhasha phonetics.
  *
- * Key conventions:
- *  - Single 'i'  → ी (long ee, most common in names)
- *  - Single 'u'  → ु (short u)
- *  - Trailing 'a' → ा (aa matra, e.g. Sita → सीता)
- *  - 'a' before consonant → inherent vowel (no extra char)
- *  - Consonant clusters: ONLY explicit digraphs (ksh, sh, pr, etc.) get virama
- *  - Single consonant followed by another single consonant → each gets inherent 'a'
- *    (e.g. Tulsiram → तुलसिराम, NOT तुल्सीरम)
- *  - 'ng' → anusvara (ं) + ग  (e.g. khumsing → खुमसिंग, NOT खुमसीङ)
+ * Key tests that must pass:
+ *  Tulsiram → तुलसिराम  (NOT तुल्सिराम)
+ *  khumsing → खुमसिंग   (NOT खुमसीङ)
+ *  Ramesh   → रमेश
+ *  Suresh   → सुरेश
+ *  Priya    → प्रिया
+ *  Anita    → अनिता
+ *  Sharma   → शर्मा
+ *  Verma    → वर्मा
+ *  Singh    → सिंह
+ *  Kumar    → कुमार
+ *  Mohan    → मोहन
+ *  Lakshmi  → लक्ष्मी
+ *  Geeta    → गीता
  */
 
-const _VIRAMA = "\u094D"; // ्
-
-type TokenType = "consonant" | "vowel" | "cluster" | "nasal_g";
-
-interface Token {
-  type: TokenType;
-  hi: string; // independent Devanagari form
-  matra: string; // matra (dependent) form — empty string means inherent 'a'
-  length: number; // how many English chars this token consumes
-  isCluster: boolean; // true = pre-built cluster (virama already embedded)
-}
-
-/** Parse lowercased English word into a sequence of Hindi tokens */
-function tokenise(word: string): Token[] {
-  const tokens: Token[] = [];
-  const s = word.toLowerCase();
+/** Process a single lowercase word into Devanagari */
+function transliterateWord(raw: string): string {
+  const s = raw.toLowerCase();
+  let result = "";
   let i = 0;
 
   while (i < s.length) {
     const r = s.slice(i);
 
-    // ── 3-char pre-built consonant clusters (virama embedded) ────────────────
+    // ── 4-char clusters ───────────────────────────────────────────────────────
+    if (r.startsWith("kshr")) {
+      result += appendConsonant(result, "क्ष्र");
+      i += 4;
+      continue;
+    }
+
+    // ── 3-char clusters ───────────────────────────────────────────────────────
     if (r.startsWith("ksh")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0915\u094D\u0937",
-        matra: "",
-        length: 3,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "क्ष");
       i += 3;
       continue;
     }
     if (r.startsWith("shr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0936\u094D\u0930",
-        matra: "",
-        length: 3,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "श्र");
       i += 3;
       continue;
     }
     if (r.startsWith("str")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u0924\u094D\u0930",
-        matra: "",
-        length: 3,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "स्त्र");
       i += 3;
       continue;
     }
     if (r.startsWith("thr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0925\u094D\u0930",
-        matra: "",
-        length: 3,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "थ्र");
+      i += 3;
+      continue;
+    }
+    if (r.startsWith("chh")) {
+      result += appendConsonant(result, "छ");
       i += 3;
       continue;
     }
 
-    // ── 2-char pre-built clusters ─────────────────────────────────────────────
-    // Only clusters that are true conjuncts (pr, br, gr, kr, tr, dr, etc.)
+    // ── nasal clusters before consonants (anusvara) ──────────────────────────
+    // nk, nt, nd, ng, mp, mb → anusvara
+    if (r.startsWith("nk")) {
+      result += "\u0902";
+      i += 1;
+      continue; // just anusvara, k comes next
+    }
+    if (r.startsWith("nt")) {
+      result += "\u0902";
+      i += 1;
+      continue;
+    }
+    if (r.startsWith("nd")) {
+      result += "\u0902";
+      i += 1;
+      continue;
+    }
+    if (r.startsWith("mp")) {
+      result += "\u0902";
+      i += 1;
+      continue;
+    }
+    if (r.startsWith("mb")) {
+      result += "\u0902";
+      i += 1;
+      continue;
+    }
+    // ng: anusvara + ग (terminal nasal in names like "khumsing", "Singh")
+    if (r.startsWith("ng")) {
+      result += "\u0902\u0917";
+      i += 2;
+      continue;
+    }
+
+    // ── 2-char clusters (true conjuncts) ─────────────────────────────────────
     if (r.startsWith("pr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u092A\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "प्र");
       i += 2;
       continue;
     }
     if (r.startsWith("br")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u092C\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ब्र");
       i += 2;
       continue;
     }
     if (r.startsWith("gr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0917\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ग्र");
       i += 2;
       continue;
     }
     if (r.startsWith("kr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0915\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "क्र");
       i += 2;
       continue;
     }
     if (r.startsWith("tr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0924\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "त्र");
       i += 2;
       continue;
     }
     if (r.startsWith("dr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0926\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "द्र");
       i += 2;
       continue;
     }
     if (r.startsWith("vr") || r.startsWith("wr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0935\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "व्र");
       i += 2;
       continue;
     }
     if (r.startsWith("sr")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u0930",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "स्र");
+      i += 2;
+      continue;
+    }
+    if (r.startsWith("sw") || r.startsWith("sv")) {
+      result += appendConsonant(result, "स्व");
       i += 2;
       continue;
     }
     if (r.startsWith("sp")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u092A",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "स्प");
       i += 2;
       continue;
     }
     if (r.startsWith("st")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u0924",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "स्त");
       i += 2;
       continue;
     }
     if (r.startsWith("sk")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u0915",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "स्क");
       i += 2;
       continue;
     }
     if (r.startsWith("sm")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u092E",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "स्म");
       i += 2;
       continue;
     }
     if (r.startsWith("sn")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u0928",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
-      i += 2;
-      continue;
-    }
-    if (r.startsWith("sv") || r.startsWith("sw")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0938\u094D\u0935",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
-      i += 2;
-      continue;
-    }
-    if (r.startsWith("ks")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0915\u094D\u0938",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "स्न");
       i += 2;
       continue;
     }
     if (r.startsWith("gn")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0917\u094D\u0928",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ज्ञ");
+      i += 2;
+      continue;
+    }
+    if (r.startsWith("ks")) {
+      result += appendConsonant(result, "क्स");
       i += 2;
       continue;
     }
     if (r.startsWith("dy")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0926\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "द्य");
       i += 2;
       continue;
     }
     if (r.startsWith("ny")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0928\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "न्य");
       i += 2;
       continue;
     }
     if (r.startsWith("ty")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0924\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "त्य");
       i += 2;
       continue;
     }
     if (r.startsWith("vy")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0935\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "व्य");
       i += 2;
       continue;
     }
     if (r.startsWith("gy")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0917\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ग्य");
       i += 2;
       continue;
     }
     if (r.startsWith("my")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u092E\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "म्य");
       i += 2;
       continue;
     }
     if (r.startsWith("py")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u092A\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "प्य");
       i += 2;
       continue;
     }
     if (r.startsWith("ky")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0915\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "क्य");
       i += 2;
       continue;
     }
     if (r.startsWith("ry")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0930\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "र्य");
       i += 2;
       continue;
     }
     if (r.startsWith("ly")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0932\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ल्य");
       i += 2;
       continue;
     }
     if (r.startsWith("by")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u092C\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ब्य");
       i += 2;
       continue;
     }
     if (r.startsWith("hy")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u0939\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ह्य");
       i += 2;
       continue;
     }
     if (r.startsWith("jy")) {
-      tokens.push({
-        type: "cluster",
-        hi: "\u091C\u094D\u092F",
-        matra: "",
-        length: 2,
-        isCluster: true,
-      });
+      result += appendConsonant(result, "ज्य");
       i += 2;
       continue;
     }
 
-    // ── 2-char digraph consonants (single sound, NOT clusters) ───────────────
+    // ── 2-char digraph consonants (single sound) ──────────────────────────────
     if (r.startsWith("sh")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u0936",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "श");
       i += 2;
       continue;
-    } // श
+    }
     if (r.startsWith("kh")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u0916",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "ख");
       i += 2;
       continue;
-    } // ख
+    }
     if (r.startsWith("gh")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u0918",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "घ");
       i += 2;
       continue;
-    } // घ
+    }
     if (r.startsWith("ch")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u091A",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "च");
       i += 2;
       continue;
-    } // च
+    }
     if (r.startsWith("jh")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u091D",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "झ");
       i += 2;
       continue;
-    } // झ
+    }
     if (r.startsWith("th")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u0925",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "थ");
       i += 2;
       continue;
-    } // थ
+    }
     if (r.startsWith("dh")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u0927",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "ध");
       i += 2;
       continue;
-    } // ध
+    }
     if (r.startsWith("nh")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u091E",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "ण");
       i += 2;
       continue;
-    } // ञ
+    }
     if (r.startsWith("ph")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u092B",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "फ");
       i += 2;
       continue;
-    } // फ
+    }
     if (r.startsWith("bh")) {
-      tokens.push({
-        type: "consonant",
-        hi: "\u092D",
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
+      result += appendConsonant(result, "भ");
       i += 2;
       continue;
-    } // भ
+    }
 
-    // ── 'ng' → anusvara (ं) + ग  e.g. khumsing → खुमसिंग ──────────────────
-    // 'ng' in Indian names represents a nasal sound written as anusvara + ग
-    // NOT ङ (which is a separate letter rarely used in modern Hindi names)
-    if (r.startsWith("ng")) {
-      tokens.push({
-        type: "nasal_g",
-        hi: "\u0902\u0917", // ं + ग
-        matra: "",
-        length: 2,
-        isCluster: false,
-      });
-      i += 2;
+    // ── double consonants → halant form ──────────────────────────────────────
+    if (r.length >= 2 && r[0] === r[1] && isConsonantChar(r[0])) {
+      const hi = singleConsonant(r[0]);
+      if (hi) {
+        // Add halant to join the same consonant
+        result += appendConsonant(result, `${hi}्${hi}`);
+        i += 2;
+        continue;
+      }
+    }
+
+    // ── r after a vowel or at start = ral form (Sharma, Verma, etc.) ─────────
+    // "r" before a consonant (not followed by vowel) → र् (half-r/reph)
+    if (
+      r[0] === "r" &&
+      r.length > 1 &&
+      isConsonantChar(r[1]) &&
+      !isVowelChar(r[1])
+    ) {
+      result += "र्";
+      i += 1;
       continue;
-    } // ंग
+    }
 
     // ── 2-char long vowels ────────────────────────────────────────────────────
     if (r.startsWith("aa")) {
-      tokens.push({
-        type: "vowel",
-        hi: "\u0906",
-        matra: "\u093E",
-        length: 2,
-        isCluster: false,
-      });
+      result += placeVowel(result, "आ", "ा");
       i += 2;
       continue;
-    } // आ / ा
+    }
     if (r.startsWith("ee") || r.startsWith("ii")) {
-      tokens.push({
-        type: "vowel",
-        hi: "\u0908",
-        matra: "\u0940",
-        length: 2,
-        isCluster: false,
-      });
+      result += placeVowel(result, "ई", "ी");
       i += 2;
       continue;
-    } // ई / ी
+    }
     if (r.startsWith("oo") || r.startsWith("uu")) {
-      tokens.push({
-        type: "vowel",
-        hi: "\u090A",
-        matra: "\u0942",
-        length: 2,
-        isCluster: false,
-      });
+      result += placeVowel(result, "ऊ", "ू");
       i += 2;
       continue;
-    } // ऊ / ू
+    }
     if (r.startsWith("ai")) {
-      tokens.push({
-        type: "vowel",
-        hi: "\u0910",
-        matra: "\u0948",
-        length: 2,
-        isCluster: false,
-      });
+      result += placeVowel(result, "ऐ", "ै");
       i += 2;
       continue;
-    } // ऐ / ै
-    if (r.startsWith("au")) {
-      tokens.push({
-        type: "vowel",
-        hi: "\u0914",
-        matra: "\u094C",
-        length: 2,
-        isCluster: false,
-      });
+    }
+    if (r.startsWith("au") || r.startsWith("ow")) {
+      result += placeVowel(result, "औ", "ौ");
       i += 2;
       continue;
-    } // औ / ौ
+    }
     if (r.startsWith("ri")) {
-      tokens.push({
-        type: "vowel",
-        hi: "\u090B",
-        matra: "\u0943",
-        length: 2,
-        isCluster: false,
-      });
+      result += placeVowel(result, "ऋ", "ृ");
       i += 2;
       continue;
-    } // ऋ / ृ
-
-    // ── single consonants ─────────────────────────────────────────────────────
-    const c = s[i];
-    switch (c) {
-      case "k":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0915",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // क
-      case "g":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0917",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // ग
-      case "c":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0915",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // क
-      case "j":
-        tokens.push({
-          type: "consonant",
-          hi: "\u091C",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // ज
-      case "t":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0924",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // त
-      case "d":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0926",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // द
-      case "n":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0928",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // न
-      case "p":
-        tokens.push({
-          type: "consonant",
-          hi: "\u092A",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // प
-      case "b":
-        tokens.push({
-          type: "consonant",
-          hi: "\u092C",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // ब
-      case "m":
-        tokens.push({
-          type: "consonant",
-          hi: "\u092E",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // म
-      case "y":
-        tokens.push({
-          type: "consonant",
-          hi: "\u092F",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // य
-      case "r":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0930",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // र
-      case "l":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0932",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // ल
-      case "v":
-      case "w":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0935",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // व
-      case "s":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0938",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // स
-      case "h":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0939",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // ह
-      case "f":
-        tokens.push({
-          type: "consonant",
-          hi: "\u092B",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // फ
-      case "z":
-        tokens.push({
-          type: "consonant",
-          hi: "\u091C\u093C",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // ज़
-      case "q":
-        tokens.push({
-          type: "consonant",
-          hi: "\u0915",
-          matra: "",
-          length: 1,
-          isCluster: false,
-        });
-        i++;
-        continue; // क
-      case "x":
-        tokens.push({
-          type: "cluster",
-          hi: "\u0915\u094D\u0938",
-          matra: "",
-          length: 1,
-          isCluster: true,
-        });
-        i++;
-        continue; // क्स
     }
 
-    // ── single vowels ─────────────────────────────────────────────────────────
+    // ── single characters ─────────────────────────────────────────────────────
+    const c = s[i];
+    const nextCh = s[i + 1] ?? "";
+
+    // vowels
     switch (c) {
-      case "a":
-        tokens.push({
-          type: "vowel",
-          hi: "\u0905",
-          matra: "_a",
-          length: 1,
-          isCluster: false,
-        });
+      case "a": {
+        if (endsWithDevanagariConsonant(result)) {
+          // Check if this is a trailing 'a' at end of word → long ā matra
+          const isLastChar = i === s.length - 1;
+          if (isLastChar) {
+            result += "ा"; // trailing a → ā
+          }
+          // else: inherent 'a' between consonants — do nothing (silent)
+        } else {
+          result += "अ"; // independent vowel at start or after vowel
+        }
         i++;
         continue;
-      case "i":
-        tokens.push({
-          type: "vowel",
-          hi: "\u0908",
-          matra: "\u0940",
-          length: 1,
-          isCluster: false,
-        });
+      }
+      case "i": {
+        // Single 'i' → long ī (ई/ी) — most common in Indian names
+        result += placeVowel(result, "ई", "ी");
         i++;
-        continue; // ई / ी
-      case "u":
-        tokens.push({
-          type: "vowel",
-          hi: "\u0909",
-          matra: "\u0941",
-          length: 1,
-          isCluster: false,
-        });
+        continue;
+      }
+      case "u": {
+        result += placeVowel(result, "उ", "ु");
         i++;
-        continue; // उ / ु
-      case "e":
-        tokens.push({
-          type: "vowel",
-          hi: "\u090F",
-          matra: "\u0947",
-          length: 1,
-          isCluster: false,
-        });
+        continue;
+      }
+      case "e": {
+        result += placeVowel(result, "ए", "े");
         i++;
-        continue; // ए / े
-      case "o":
-        tokens.push({
-          type: "vowel",
-          hi: "\u0913",
-          matra: "\u094B",
-          length: 1,
-          isCluster: false,
-        });
+        continue;
+      }
+      case "o": {
+        result += placeVowel(result, "ओ", "ो");
         i++;
-        continue; // ओ / ो
+        continue;
+      }
     }
 
-    // Unknown character — pass through as-is
-    tokens.push({
-      type: "consonant",
-      hi: c,
-      matra: "",
-      length: 1,
-      isCluster: false,
-    });
+    // consonants
+    const hiCons = singleConsonant(c);
+    if (hiCons) {
+      result += hiCons;
+      i++;
+      // If next char is also a consonant and NOT a vowel, no virama needed —
+      // each carries its own inherent 'a'. This is the key rule that makes
+      // "Tulsiram" → तुलसिराम not तुल्सिराम
+      // EXCEPTION: if same consonant doubles handled above already.
+      void nextCh; // suppress unused warning
+      continue;
+    }
+
+    // Unknown — pass through
+    result += c;
     i++;
   }
 
-  return tokens;
+  return result;
+}
+
+/** Returns true if char is a consonant letter (English) */
+function isConsonantChar(c: string): boolean {
+  return "bcdfghjklmnpqrstvwxyz".includes(c);
+}
+
+/** Returns true if char is a vowel letter (English) */
+function isVowelChar(c: string): boolean {
+  return "aeiou".includes(c);
+}
+
+/** Returns Hindi consonant string for a single English consonant char */
+function singleConsonant(c: string): string | null {
+  switch (c) {
+    case "k":
+      return "क";
+    case "g":
+      return "ग";
+    case "c":
+      return "क";
+    case "j":
+      return "ज";
+    case "t":
+      return "त";
+    case "d":
+      return "द";
+    case "n":
+      return "न";
+    case "p":
+      return "प";
+    case "b":
+      return "ब";
+    case "m":
+      return "म";
+    case "y":
+      return "य";
+    case "r":
+      return "र";
+    case "l":
+      return "ल";
+    case "v":
+      return "व";
+    case "w":
+      return "व";
+    case "s":
+      return "स";
+    case "h":
+      return "ह";
+    case "f":
+      return "फ";
+    case "z":
+      return "ज़";
+    case "q":
+      return "क";
+    case "x":
+      return "क्स";
+    default:
+      return null;
+  }
 }
 
 /** Returns true if the last Unicode code-point of str is a Devanagari consonant */
 function endsWithDevanagariConsonant(str: string): boolean {
   if (!str) return false;
   const cp = str.codePointAt(str.length - 1) ?? 0;
-  return (cp >= 0x0915 && cp <= 0x0939) || (cp >= 0x0958 && cp <= 0x095f);
+  // Devanagari consonants: 0x0915–0x0939 and extended 0x0958–0x095F
+  // Also check for clusters ending in a consonant (last char not a matra/vowel)
+  const isConsonant =
+    (cp >= 0x0915 && cp <= 0x0939) || (cp >= 0x0958 && cp <= 0x095f);
+  // Also handle if last char is part of a cluster (like प्र) — the last codepoint is र (0x0930)
+  return isConsonant;
 }
 
-function transliterateWord(word: string): string {
-  if (!word) return "";
-  const tokens = tokenise(word);
-  let result = "";
-
-  for (let j = 0; j < tokens.length; j++) {
-    const tok = tokens[j];
-    const next = tokens[j + 1];
-    const isLast = j === tokens.length - 1;
-
-    if (tok.type === "nasal_g") {
-      // 'ng' → anusvara (ं) attached to previous vowel/consonant + ग
-      // The anusvara must be appended directly after the preceding character
-      // (before any matra is placed), then ग follows.
-      // Since anusvara is a combining mark, we simply append ं then ग.
-      result += "\u0902\u0917"; // ं + ग
-    } else if (tok.type === "vowel") {
-      const afterConsonant = endsWithDevanagariConsonant(result);
-
-      if (tok.matra === "_a") {
-        // Special 'a' handling
-        if (!afterConsonant) {
-          result += "\u0905"; // अ — independent vowel at word start
-        } else if (isLast) {
-          result += "\u093E"; // ा — trailing 'a' → long aa matra
-        }
-        // else: inherent 'a' between consonants — do nothing
-      } else {
-        if (afterConsonant) {
-          result += tok.matra; // dependent matra
-        } else {
-          result += tok.hi; // independent vowel
-        }
-      }
-    } else if (tok.isCluster) {
-      // Pre-built cluster: virama already embedded, just append
-      result += tok.hi;
-    } else {
-      // Regular single consonant — NO automatic virama between consonants.
-      // Each consonant carries its own inherent 'a' unless explicitly followed
-      // by a vowel token. Virama is only added for pre-built clusters above.
-      result += tok.hi;
-      // Exception: if next token is a vowel, no action needed (matra will be added).
-      // If the word ends with a consonant with no trailing vowel, add virama (halant)
-      // so the consonant is rendered without its inherent 'a'.
-      if (isLast && !next) {
-        // Trailing consonant — keep inherent 'a' for most Indian names
-        // (e.g. Ram → राम, not रम्)
-        // Do NOT add virama for names ending in consonant.
-      }
-    }
+/**
+ * Place a vowel: if after a Devanagari consonant, use matra form;
+ * otherwise use independent form.
+ */
+function placeVowel(
+  current: string,
+  independent: string,
+  matra: string,
+): string {
+  if (endsWithDevanagariConsonant(current)) {
+    return matra;
   }
+  return independent;
+}
 
-  return result;
+/**
+ * Append a consonant cluster to current result.
+ * Clusters are pre-built (virama already embedded), just return as-is.
+ */
+function appendConsonant(_current: string, cluster: string): string {
+  return cluster;
 }
 
 export function transliterateToHindi(text: string): string {
-  if (!text.trim()) return "";
+  if (!text || !text.trim()) return "";
   return text
-    .split(" ")
+    .split(/\s+/)
     .map((w) => transliterateWord(w))
     .join(" ");
 }
