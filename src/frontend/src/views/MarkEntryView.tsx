@@ -53,6 +53,32 @@ const CLASS_SUBJECT_CONFIG: Record<
     allSubjects: { key: string; labelHi: string }[];
   }
 > = {
+  "1": {
+    categories: {
+      Language: ["Hindi", "English"],
+      Subject: ["Mathematics", "EVS", "Drawing"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "EVS", labelHi: "पर्यावरण (EVS)" },
+      { key: "Drawing", labelHi: "चित्रकला" },
+    ],
+  },
+  "2": {
+    categories: {
+      Language: ["Hindi", "English"],
+      Subject: ["Mathematics", "EVS", "Drawing"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "EVS", labelHi: "पर्यावरण (EVS)" },
+      { key: "Drawing", labelHi: "चित्रकला" },
+    ],
+  },
   "3": {
     categories: {
       Language: ["Hindi", "English"],
@@ -66,6 +92,18 @@ const CLASS_SUBJECT_CONFIG: Record<
     ],
   },
   "4": {
+    categories: {
+      Language: ["Hindi", "English"],
+      Subject: ["Mathematics", "EVS"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "EVS", labelHi: "पर्यावरण (EVS)" },
+    ],
+  },
+  "5": {
     categories: {
       Language: ["Hindi", "English"],
       Subject: ["Mathematics", "EVS"],
@@ -105,9 +143,90 @@ const CLASS_SUBJECT_CONFIG: Record<
       { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
     ],
   },
+  "8": {
+    categories: {
+      Language: ["Hindi", "English", "Sanskrit"],
+      Subject: ["Mathematics", "Science", "Social Science"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Sanskrit", labelHi: "संस्कृत" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "Science", labelHi: "विज्ञान" },
+      { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
+    ],
+  },
+  "9": {
+    categories: {
+      Language: ["Hindi", "English", "Sanskrit"],
+      Subject: ["Mathematics", "Science", "Social Science"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Sanskrit", labelHi: "संस्कृत" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "Science", labelHi: "विज्ञान" },
+      { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
+    ],
+  },
+  "10": {
+    categories: {
+      Language: ["Hindi", "English", "Sanskrit"],
+      Subject: ["Mathematics", "Science", "Social Science"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Sanskrit", labelHi: "संस्कृत" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "Science", labelHi: "विज्ञान" },
+      { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
+    ],
+  },
+  "11": {
+    categories: {
+      Language: ["Hindi", "English"],
+      Subject: ["Mathematics", "Science", "Social Science"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "Science", labelHi: "विज्ञान" },
+      { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
+    ],
+  },
+  "12": {
+    categories: {
+      Language: ["Hindi", "English"],
+      Subject: ["Mathematics", "Science", "Social Science"],
+    },
+    allSubjects: [
+      { key: "Hindi", labelHi: "हिन्दी" },
+      { key: "English", labelHi: "अंग्रेजी" },
+      { key: "Mathematics", labelHi: "गणित" },
+      { key: "Science", labelHi: "विज्ञान" },
+      { key: "Social Science", labelHi: "सामाजिक विज्ञान" },
+    ],
+  },
 };
 
-const CLASS_OPTIONS = ["3", "4", "6", "7"];
+const CLASS_OPTIONS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+];
 
 // Default (class 6) — overridden dynamically
 const SUBJECTS_BY_CATEGORY: Record<string, string[]> = {

@@ -77,6 +77,20 @@ const SUBJECTS_BY_CLASS: Record<
   string,
   { key: string; hindi: string; english: string }[]
 > = {
+  "1": [
+    { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
+    { key: "english", hindi: "अंग्रेजी", english: "English" },
+    { key: "math", hindi: "गणित", english: "Math" },
+    { key: "evs", hindi: "पर्यावरण", english: "EVS" },
+    { key: "drawing", hindi: "चित्रकला", english: "Drawing" },
+  ],
+  "2": [
+    { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
+    { key: "english", hindi: "अंग्रेजी", english: "English" },
+    { key: "math", hindi: "गणित", english: "Math" },
+    { key: "evs", hindi: "पर्यावरण", english: "EVS" },
+    { key: "drawing", hindi: "चित्रकला", english: "Drawing" },
+  ],
   "3": [
     { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
     { key: "english", hindi: "अंग्रेजी", english: "English" },
@@ -111,6 +125,46 @@ const SUBJECTS_BY_CLASS: Record<
     { key: "social", hindi: "सामाजिक विज्ञान", english: "Social Science" },
     { key: "sanskrit", hindi: "संस्कृत", english: "Sanskrit" },
   ],
+  "8": [
+    { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
+    { key: "english", hindi: "अंग्रेजी", english: "English" },
+    { key: "math", hindi: "गणित", english: "Math" },
+    { key: "science", hindi: "विज्ञान", english: "Science" },
+    { key: "social", hindi: "सामाजिक विज्ञान", english: "Social Science" },
+    { key: "sanskrit", hindi: "संस्कृत", english: "Sanskrit" },
+  ],
+  "9": [
+    { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
+    { key: "english", hindi: "अंग्रेजी", english: "English" },
+    { key: "math", hindi: "गणित", english: "Math" },
+    { key: "science", hindi: "विज्ञान", english: "Science" },
+    { key: "social", hindi: "सामाजिक विज्ञान", english: "Social Science" },
+    { key: "sanskrit", hindi: "संस्कृत", english: "Sanskrit" },
+  ],
+  "10": [
+    { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
+    { key: "english", hindi: "अंग्रेजी", english: "English" },
+    { key: "math", hindi: "गणित", english: "Math" },
+    { key: "science", hindi: "विज्ञान", english: "Science" },
+    { key: "social", hindi: "सामाजिक विज्ञान", english: "Social Science" },
+    { key: "sanskrit", hindi: "संस्कृत", english: "Sanskrit" },
+  ],
+  "11": [
+    { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
+    { key: "english", hindi: "अंग्रेजी", english: "English" },
+    { key: "math", hindi: "गणित", english: "Math" },
+    { key: "science", hindi: "विज्ञान", english: "Science" },
+    { key: "social", hindi: "सामाजिक विज्ञान", english: "Social Science" },
+    { key: "sanskrit", hindi: "संस्कृत", english: "Sanskrit" },
+  ],
+  "12": [
+    { key: "hindi", hindi: "हिन्दी", english: "Hindi" },
+    { key: "english", hindi: "अंग्रेजी", english: "English" },
+    { key: "math", hindi: "गणित", english: "Math" },
+    { key: "science", hindi: "विज्ञान", english: "Science" },
+    { key: "social", hindi: "सामाजिक विज्ञान", english: "Social Science" },
+    { key: "sanskrit", hindi: "संस्कृत", english: "Sanskrit" },
+  ],
 };
 
 const SUBJECT_KEY_MAP: Record<string, string> = {
@@ -121,6 +175,7 @@ const SUBJECT_KEY_MAP: Record<string, string> = {
   social: "Social Science",
   sanskrit: "Sanskrit",
   evs: "EVS",
+  drawing: "Drawing",
 };
 
 const EXAM_KEY_MAP: Record<string, string> = {
@@ -688,9 +743,22 @@ export function ReportCardView({ role: _role }: { role: string }) {
             onChange={(e) => setSelectedClass(e.target.value)}
             className="border border-border rounded px-3 py-1.5 text-sm bg-background text-foreground"
           >
-            {["3", "4", "5", "6", "7"].map((cls) => (
+            {[
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10",
+              "11",
+              "12",
+            ].map((cls) => (
               <option key={cls} value={cls}>
-                कक्षा {cls}वीं
+                कक्षा {cls}
               </option>
             ))}
           </select>

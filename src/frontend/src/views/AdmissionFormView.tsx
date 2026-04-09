@@ -11,7 +11,7 @@ const LOGO_SRC =
 const LOGO2_SRC =
   "/assets/uploads/picture2-019d1f2c-c802-73da-a6dc-465b351e743a-1.png";
 
-const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8"];
+const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 const SECTIONS = ["A", "B", "C", "D"];
 const CATEGORIES = ["सामान्य", "OBC", "SC", "ST", "अन्य"];
 const RELIGIONS = ["हिन्दू", "मुस्लिम", "सिख", "ईसाई", "बौद्ध", "जैन", "अन्य"];

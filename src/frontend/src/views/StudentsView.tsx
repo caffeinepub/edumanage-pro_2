@@ -50,7 +50,7 @@ const LS_KEY = "ems_added_students";
 const LS_DELETED_KEY = "ems_deleted_ids";
 const LS_OVERRIDES_KEY = "ems_student_overrides";
 
-const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8"];
+const CLASSES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 const SECTIONS = ["A", "B", "C", "D"];
 const CATEGORIES = ["सामान्य", "OBC", "SC", "ST", "अन्य"];
 const RELIGIONS = ["हिन्दू", "मुस्लिम", "सिख", "ईसाई", "बौद्ध", "जैन", "अन्य"];
